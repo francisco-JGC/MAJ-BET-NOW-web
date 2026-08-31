@@ -60,7 +60,7 @@ export function WinnerDetailsModal({
     >
       <div className="space-y-5">
         {/* Prize card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 p-5 text-white shadow-lg">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-500 p-5 text-white shadow-lg">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.08em] text-white/80">

@@ -117,7 +117,7 @@ export function HomePage() {
               label={`Boletos ${suffix}`}
               value={data.tickets.toLocaleString('es')}
               icon={Receipt}
-              tone="amber"
+              tone="purple"
               hint={`Ticket promedio ${formatCurrency(data.averageTicket)}`}
               delta={pctDelta(data.tickets, data.ticketsPrev, 'up')}
             />

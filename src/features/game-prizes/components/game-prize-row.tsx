@@ -184,7 +184,7 @@ export function GamePrizeRow({
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-500 text-white">
           <Dices className="size-3.5" strokeWidth={2.4} />
         </span>
         <div className="min-w-0">
@@ -255,7 +255,7 @@ export function GamePrizeRow({
       {anyDirty && status === 'idle' && (
         <span
           className={cn(
-            '-mt-1.5 pl-11 text-[10px] text-amber-700',
+            '-mt-1.5 pl-11 text-[10px] text-purple-700',
             columnCount === 4
               ? 'col-span-4'
               : columnCount === 3
@@ -314,7 +314,7 @@ function PrizeField({
             overridden
               ? 'border-indigo-200 bg-indigo-50/50 font-semibold text-indigo-900'
               : 'border-border',
-            dirty && 'border-amber-300 bg-amber-50/50',
+            dirty && 'border-purple-300 bg-purple-50/50',
           )}
         />
         <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground">

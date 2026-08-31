@@ -24,7 +24,7 @@ const ROLE_TABS: readonly SegmentTab<RoleFilter>[] = [
   { key: 'all', label: 'Todos' },
   { key: UserRole.SELLER, label: 'Vendedores', tone: 'emerald' },
   { key: UserRole.PARTNER, label: 'Socios' },
-  { key: UserRole.ADMIN, label: 'Administradores', tone: 'amber' },
+  { key: UserRole.ADMIN, label: 'Administradores', tone: 'purple' },
 ] as const;
 
 const PAGE_SIZE = 20;
@@ -318,7 +318,7 @@ function Empty() {
 
 const ROLE_STYLE: Record<UserRole, { classes: string; label: string }> = {
   admin: {
-    classes: 'bg-amber-500/10 text-amber-700 ring-amber-500/20',
+    classes: 'bg-purple-500/10 text-purple-700 ring-purple-500/20',
     label: 'Administrador',
   },
   partner: {

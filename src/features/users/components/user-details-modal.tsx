@@ -615,7 +615,7 @@ function RoleOption({
 
 const ROLE_STYLE: Record<UserRole, { classes: string; label: string }> = {
   admin: {
-    classes: 'bg-amber-500/10 text-amber-700 ring-amber-500/20',
+    classes: 'bg-purple-500/10 text-purple-700 ring-purple-500/20',
     label: 'Administrador',
   },
   partner: {

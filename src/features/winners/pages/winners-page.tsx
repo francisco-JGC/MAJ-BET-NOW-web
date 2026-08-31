@@ -118,7 +118,7 @@ export function WinnersPage() {
 
       <div className="grid gap-4">
         <StatCard
-          tone="amber"
+          tone="purple"
           label="Total ganado por clientes"
           count={stats.count}
           amount={stats.amount}
@@ -312,7 +312,7 @@ function WinnerCard({
       type="button"
       onClick={onClick}
       className={cn(
-        'group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-amber-500/50',
+        'group relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-purple-500/50',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -329,7 +329,7 @@ function WinnerCard({
           <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Premio
           </p>
-          <p className="text-2xl font-black tabular-nums text-amber-800">
+          <p className="text-2xl font-black tabular-nums text-purple-800">
             {formatCurrency(totalPrize)}
           </p>
         </div>
@@ -367,14 +367,14 @@ function StatCard({
   count,
   amount,
 }: {
-  tone: 'amber' | 'emerald';
+  tone: 'purple' | 'emerald';
   label: string;
   count: number;
   amount: number;
 }) {
   const style =
-    tone === 'amber'
-      ? 'from-amber-500 to-orange-500'
+    tone === 'purple'
+      ? 'from-purple-500 to-purple-500'
       : 'from-emerald-500 to-teal-500';
   return (
     <div

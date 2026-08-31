@@ -29,7 +29,7 @@ const TYPE_LABELS: Record<GameType, string> = {
 
 const TYPE_TONE: Record<GameType, string> = {
   regular: 'bg-slate-100 text-slate-700 ring-slate-200',
-  date: 'bg-amber-500/10 text-amber-700 ring-amber-500/20',
+  date: 'bg-purple-500/10 text-purple-700 ring-purple-500/20',
   three_digit: 'bg-indigo-500/10 text-indigo-700 ring-indigo-500/20',
   four_digit: 'bg-fuchsia-500/10 text-fuchsia-700 ring-fuchsia-500/20',
   multi_sorteo: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',

@@ -93,7 +93,7 @@ export function LimitRow({
   return (
     <li className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-slate-50/40">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-500 text-white">
           <Dices className="size-3.5" strokeWidth={2.4} />
         </span>
         <div className="min-w-0">
@@ -133,7 +133,7 @@ export function LimitRow({
             existing
               ? 'border-indigo-200 bg-indigo-50/50 font-semibold text-indigo-900'
               : 'border-border',
-            isDirty && status === 'idle' && 'border-amber-300 bg-amber-50/50',
+            isDirty && status === 'idle' && 'border-purple-300 bg-purple-50/50',
           )}
         />
         {status !== 'idle' && (

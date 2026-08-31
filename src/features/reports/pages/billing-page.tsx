@@ -229,7 +229,7 @@ function GameRow({ row }: { row: BillingByGameRow }) {
     <tr className="hover:bg-slate-50/60">
       <td className="px-6 py-3.5">
         <div className="flex items-center gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-500 text-white">
             <Dices className="size-4" strokeWidth={2.4} />
           </span>
           <span className="font-semibold text-foreground">{row.gameName}</span>

@@ -3,7 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 
 import { cn } from '@/shared/lib/cn';
 
-type Tone = 'emerald' | 'rose' | 'amber' | 'indigo';
+type Tone = 'emerald' | 'rose' | 'purple' | 'indigo';
 
 export interface KpiDelta {
   /** Signed percent change (e.g., 12.3 or -7.5). Null means "no baseline". */
@@ -39,11 +39,11 @@ const TONE: Record<
     icon: 'text-rose-600',
     ring: 'ring-rose-500/20',
   },
-  amber: {
-    chip: 'bg-amber-500/10',
-    iconWrap: 'bg-amber-500/15',
-    icon: 'text-amber-600',
-    ring: 'ring-amber-500/20',
+  purple: {
+    chip: 'bg-purple-500/10',
+    iconWrap: 'bg-purple-500/15',
+    icon: 'text-purple-600',
+    ring: 'ring-purple-500/20',
   },
   indigo: {
     chip: 'bg-indigo-500/10',

@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/cn';
 
-export type SegmentTone = 'emerald' | 'rose' | 'amber' | 'neutral';
+export type SegmentTone = 'emerald' | 'rose' | 'purple' | 'neutral';
 
 export interface SegmentTab<K extends string> {
   key: K;
@@ -18,7 +18,7 @@ interface Props<K extends string> {
 const DOT: Record<SegmentTone, string> = {
   emerald: 'bg-emerald-500',
   rose: 'bg-rose-500',
-  amber: 'bg-amber-500',
+  purple: 'bg-purple-500',
   neutral: 'bg-slate-400',
 };
 
