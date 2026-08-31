@@ -1,34 +1,37 @@
 @import 'tailwindcss';
 
-/* shadcn-friendly theme tokens (light) */
+/* shadcn-friendly theme tokens (light) — MajbetNow purple + gold. */
 @theme {
-  --color-background: oklch(98% 0.005 80);
-  --color-foreground: oklch(20% 0.02 60);
+  --color-background: oklch(98% 0.005 300);
+  --color-foreground: oklch(20% 0.03 290);
 
   --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(20% 0.02 60);
+  --color-card-foreground: oklch(20% 0.03 290);
 
   --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(20% 0.02 60);
+  --color-popover-foreground: oklch(20% 0.03 290);
 
-  --color-primary: oklch(64% 0.14 65);
+  /* Primary — morado profundo (aprox. Tailwind purple-600 / #7C3AED). */
+  --color-primary: oklch(53% 0.24 289);
   --color-primary-foreground: oklch(100% 0 0);
 
-  --color-secondary: oklch(94% 0.03 80);
-  --color-secondary-foreground: oklch(30% 0.05 60);
+  /* Fondos sutiles con tinte lila muy suave. */
+  --color-secondary: oklch(96% 0.02 290);
+  --color-secondary-foreground: oklch(30% 0.08 290);
 
-  --color-muted: oklch(95% 0.01 80);
-  --color-muted-foreground: oklch(48% 0.02 60);
+  --color-muted: oklch(96% 0.01 290);
+  --color-muted-foreground: oklch(48% 0.03 290);
 
-  --color-accent: oklch(75% 0.13 78);
+  /* Accent — dorado, para KPIs de éxito / detalles premium (~#EAB308). */
+  --color-accent: oklch(80% 0.17 82);
   --color-accent-foreground: oklch(20% 0.05 60);
 
   --color-destructive: oklch(62% 0.22 27);
   --color-destructive-foreground: oklch(100% 0 0);
 
-  --color-border: oklch(88% 0.01 80);
-  --color-input: oklch(88% 0.01 80);
-  --color-ring: oklch(64% 0.14 65);
+  --color-border: oklch(90% 0.02 290);
+  --color-input: oklch(90% 0.02 290);
+  --color-ring: oklch(53% 0.24 289);
 
   --radius: 0.75rem;
 }
