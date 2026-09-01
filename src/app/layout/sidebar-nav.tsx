@@ -95,7 +95,6 @@ const NAV_ITEMS: readonly NavItem[] = [
     to: APP_ROUTES.latestResults,
     label: 'Últimos Resultados',
     icon: History,
-    roles: ADMIN_ONLY,
   },
   {
     to: APP_ROUTES.systemConfig,

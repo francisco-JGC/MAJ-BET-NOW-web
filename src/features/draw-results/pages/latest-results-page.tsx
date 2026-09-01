@@ -4,6 +4,8 @@ import { Calendar, Dices, History, Plus, Trophy } from 'lucide-react';
 import { RegisterResultModal } from '@/features/draw-results/components/register-result-modal';
 import { useDrawResults } from '@/features/draw-results/hooks/use-draw-results';
 import { useGames } from '@/features/games/hooks/use-games';
+import { useSession } from '@/features/auth/hooks/use-session';
+import { UserRole } from '@/features/users/types';
 import { cn } from '@/shared/lib/cn';
 import { Select } from '@/shared/ui/select';
 
@@ -31,6 +33,9 @@ function daysAgoIso(days: number): string {
 }
 
 export function LatestResultsPage() {
+  const session = useSession();
+  const isPartner = session?.user.role === UserRole.PARTNER;
+
   const [gameId, setGameId] = useState<string>('');
   const [from, setFrom] = useState<string>(daysAgoIso(7));
   const [to, setTo] = useState<string>(todayIso());
@@ -84,14 +89,16 @@ export function LatestResultsPage() {
               {data.length === 1 ? 'resultado' : 'resultados'}
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="size-4" strokeWidth={2.8} />
-            Registrar resultado
-          </button>
+          {!isPartner && (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="size-4" strokeWidth={2.8} />
+              Registrar resultado
+            </button>
+          )}
         </div>
       </header>
 
@@ -158,7 +165,7 @@ export function LatestResultsPage() {
             key={group.dayKey}
             group={group}
             gameById={gameById}
-            onEdit={(r) => setEditing(r)}
+            onEdit={isPartner ? undefined : (r) => setEditing(r)}
           />
         ))}
       </div>
@@ -249,7 +256,7 @@ function DayGroup({
 }: {
   group: GroupedResults;
   gameById: Map<string, Game>;
-  onEdit: (result: DrawResult) => void;
+  onEdit?: (result: DrawResult) => void;
 }) {
   return (
     <section>
@@ -268,7 +275,7 @@ function DayGroup({
             key={item.id}
             result={item}
             game={gameById.get(item.gameId) ?? null}
-            onClick={() => onEdit(item)}
+            onClick={onEdit ? () => onEdit(item) : undefined}
           />
         ))}
       </div>
@@ -283,7 +290,7 @@ function ResultCard({
 }: {
   result: DrawResult;
   game: Game | null;
-  onClick: () => void;
+  onClick?: () => void;
 }) {
   const drawAt = new Date(result.drawAt);
   const time = new Intl.DateTimeFormat('es', {
@@ -292,12 +299,11 @@ function ResultCard({
     hour12: true,
   }).format(drawAt);
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:shadow-[0_10px_24px_-14px_rgba(15,23,42,0.18)]"
-    >
+  const cardClass =
+    'group relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border bg-card p-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]';
+
+  const inner = (
+    <>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xs font-black text-white">
@@ -315,6 +321,20 @@ function ResultCard({
         {result.winningNumber}
       </div>
       <div className="pointer-events-none absolute -right-6 -top-6 size-24 rounded-full bg-indigo-500/10 opacity-40 blur-3xl transition group-hover:opacity-70" />
+    </>
+  );
+
+  if (!onClick) {
+    return <div className={cardClass}>{inner}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(cardClass, 'transition hover:shadow-[0_10px_24px_-14px_rgba(15,23,42,0.18)]')}
+    >
+      {inner}
     </button>
   );
 }
