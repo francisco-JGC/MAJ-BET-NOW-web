@@ -17,6 +17,9 @@ export interface User {
   nationalId: string | null;
   paymentPercentage: number | null;
   salePointId: string | null;
+  /** Solo aplica a admins con el modo vendedor configurado. Ver `useMobileSalesProfile`. */
+  mobileSalesEnabled: boolean;
+  defaultSalePointId: string | null;
   createdById: string | null;
   createdByName: string | null;
   createdAt: string;

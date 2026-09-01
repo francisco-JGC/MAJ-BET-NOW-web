@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, LogOut, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, Smartphone, X } from 'lucide-react';
 
 import { SidebarNav } from '@/app/layout/sidebar-nav';
 import { useSidebarStore } from '@/app/layout/sidebar-store';
 import { useLogout, useSession } from '@/features/auth/hooks/use-session';
+import { MobileSalesProfileModal } from '@/features/users/components/mobile-sales-profile-modal';
+import { UserRole } from '@/features/users/types';
 import { APP_ROUTES } from '@/shared/constants/routes';
 import { cn } from '@/shared/lib/cn';
 
@@ -117,7 +119,9 @@ function UserMenu({
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [mobileSalesOpen, setMobileSalesOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isAdmin = role === UserRole.ADMIN;
 
   useEffect(() => {
     if (!open) return;
@@ -180,6 +184,20 @@ function UserMenu({
               {role}
             </div>
           </div>
+          {isAdmin && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                setMobileSalesOpen(true);
+              }}
+              className="flex w-full items-center gap-2 border-b border-border px-3 py-2.5 text-left text-sm text-foreground hover:bg-secondary"
+            >
+              <Smartphone className="size-4 text-muted-foreground" />
+              Modo vendedor
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -193,6 +211,12 @@ function UserMenu({
             Cerrar sesión
           </button>
         </div>
+      )}
+      {isAdmin && (
+        <MobileSalesProfileModal
+          open={mobileSalesOpen}
+          onClose={() => setMobileSalesOpen(false)}
+        />
       )}
     </div>
   );
