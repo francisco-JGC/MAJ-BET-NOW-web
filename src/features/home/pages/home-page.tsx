@@ -10,12 +10,11 @@ import {
   UserRound,
 } from 'lucide-react';
 
-import { GamesBreakdown } from '@/features/home/components/games-breakdown';
+import { ExpandableKpiCard } from '@/features/home/components/expandable-kpi-card';
 import {
   KpiCard,
   type KpiDelta,
 } from '@/features/home/components/kpi-card';
-import { RecentWinnersCard } from '@/features/home/components/recent-winners-card';
 import { TopRankingCard } from '@/features/home/components/top-ranking-card';
 import { useDashboardSummary } from '@/features/home/hooks/use-dashboard-summary';
 import { useSession } from '@/features/auth/hooks/use-session';
@@ -88,23 +87,32 @@ export function HomePage() {
       {error && <HomeError message={error.message} />}
       {data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard
+          {/* Facturado y Pérdida — expandibles por juego */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ExpandableKpiCard
               label={`Facturado ${suffix}`}
               value={formatCurrency(data.billed)}
               icon={CircleDollarSign}
               tone="emerald"
               hint={deltaHint}
               delta={pctDelta(data.billed, data.billedPrev, 'up')}
+              breakdown={data.byGame}
+              breakdownKey="billed"
             />
-            <KpiCard
+            <ExpandableKpiCard
               label={`Pérdida ${suffix}`}
               value={formatCurrency(data.won)}
               icon={TrendingDown}
               tone="rose"
               hint="Premios ganados en el rango"
               delta={pctDelta(data.won, data.wonPrev, 'down')}
+              breakdown={data.byGame}
+              breakdownKey="won"
             />
+          </div>
+
+          {/* KPIs secundarios */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard
               label={`Utilidad ${suffix}`}
               value={formatCurrency(data.profit)}
@@ -135,8 +143,6 @@ export function HomePage() {
             />
           </div>
 
-          <GamesBreakdown items={data.byGame} />
-
           <div className="grid gap-6 lg:grid-cols-2">
             <TopRankingCard
               title={`Top vendedores (${suffix})`}
@@ -153,8 +159,6 @@ export function HomePage() {
               tone="emerald"
             />
           </div>
-
-          <RecentWinnersCard data={data.recentWinners} />
         </>
       )}
     </div>
