@@ -83,11 +83,17 @@ export function MultiSelect<V extends string>({
       ? values.filter((v) => v !== value)
       : [...values, value];
     onChange(next);
+    // Cerramos el dropdown en cada selección — comportamiento consistente
+    // con el `Select` simple. Si el usuario quiere marcar varias, vuelve
+    // a abrir. Es un click extra pero evita la confusión de "el dropdown
+    // no responde al primer tap después de elegir".
+    setOpen(false);
   };
 
   const clear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange([]);
+    setOpen(false);
   };
 
   const summary =
