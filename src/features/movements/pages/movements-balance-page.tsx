@@ -452,14 +452,12 @@ function BranchCard({
         </div>
         <ShareButton
           getElement={() => cardRef.current}
+          // Sin teléfono conocido el share sigue funcionando: en móvil el
+          // Web Share API abre el picker de contactos y el operador
+          // elige el chat; en desktop se descarga la imagen y se
+          // comparte manualmente desde WhatsApp Desktop / Web.
           phone={row.ownerPartnerPhone}
-          disabledReason={
-            !row.ownerPartnerId
-              ? 'Sin encargado asignado'
-              : !row.ownerPartnerPhone
-                ? 'Encargado sin teléfono'
-                : null
-          }
+          disabledReason={null}
           fileName={`sucursal-${row.salePointName.replace(/\s+/g, '-').toLowerCase()}.png`}
           message={`Reporte de ${row.salePointName} — Restante: ${formatCurrency(effectiveNet)}.`}
         />
@@ -572,9 +570,7 @@ function SellerCard({
         <ShareButton
           getElement={() => cardRef.current}
           phone={row.sellerPhone}
-          disabledReason={
-            !row.sellerPhone ? 'Vendedor sin teléfono' : null
-          }
+          disabledReason={null}
           fileName={`vendedor-${row.sellerName.replace(/\s+/g, '-').toLowerCase()}.png`}
           message={`Reporte de ${row.sellerName} — Vendido: ${formatCurrency(row.billed)}.`}
         />

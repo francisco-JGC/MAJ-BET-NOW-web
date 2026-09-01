@@ -79,17 +79,22 @@ export interface ShareCardResult {
  * Comparte un card como imagen por WhatsApp.
  *
  * - En móvil (Web Share API): envía la imagen + texto directamente. El
- *   usuario elige el chat en el picker nativo — el número queda como
- *   filtro pero WhatsApp muestra todos los contactos por seguridad.
- * - Fallback (desktop / navegadores sin file share): descarga el PNG y
- *   abre `wa.me/<phone>` en pestaña nueva; el operador arrastra la
- *   imagen al chat.
+ *   usuario elige el chat en el picker nativo — con teléfono conocido o
+ *   sin él, WhatsApp lista todos los contactos y el operador escoge.
+ * - Fallback (desktop / navegadores sin file share): descarga el PNG.
+ *   Si además hay teléfono conocido, abre `wa.me/<phone>` con el texto
+ *   pre-cargado para agilizar. Si no hay teléfono, solo descarga —
+ *   el operador comparte manualmente desde WhatsApp Desktop / Web.
+ *
+ * Antes se bloqueaba el share cuando faltaba el teléfono, lo que
+ * dejaba a encargados/vendedores sin número configurado sin forma de
+ * recibir su reporte. La captura de la imagen NO depende del número:
+ * el share nativo funciona igual, y en desktop la descarga alcanza.
  */
 export async function shareCardImage(
   opts: ShareCardOptions,
 ): Promise<ShareCardResult> {
   const phone = normalizeNiPhoneForWhatsApp(opts.phone);
-  if (!phone) return { ok: false, mode: 'fallback', reason: 'no_phone' };
 
   let blob: Blob;
   try {
@@ -116,9 +121,9 @@ export async function shareCardImage(
     }
   }
 
-  // Fallback: descargar la imagen + abrir chat de WhatsApp con el texto
-  // pre-cargado. El operador adjunta la imagen manualmente desde la
-  // galería / descargas.
+  // Fallback: descargar la imagen. Si hay teléfono, además abrimos el
+  // chat de WhatsApp con el texto pre-cargado; sin teléfono, el usuario
+  // arrastra la imagen al chat que elija manualmente.
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -130,7 +135,9 @@ export async function shareCardImage(
   // que en algunos navegadores puede bloquear el click original.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-  const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(opts.message)}`;
-  window.open(waUrl, '_blank', 'noopener,noreferrer');
+  if (phone) {
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(opts.message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  }
   return { ok: true, mode: 'fallback' };
 }
