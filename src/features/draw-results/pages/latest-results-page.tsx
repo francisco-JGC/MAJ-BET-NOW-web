@@ -224,7 +224,7 @@ function groupByDay(items: DrawResult[]): GroupedResults[] {
   return keyOrder.map((dayKey) => ({
     dayKey,
     label: formatDayLabel(dayKey),
-    items: map.get(dayKey)!,
+    items: map.get(dayKey)!.sort((a, b) => a.drawAt.localeCompare(b.drawAt)),
   }));
 }
 
