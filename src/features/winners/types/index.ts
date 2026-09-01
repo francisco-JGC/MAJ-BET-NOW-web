@@ -22,6 +22,9 @@ export interface Ticket {
   count: number;
   drawAt: string;
   cutoffMinutes: number;
+  /** Marca visual — no afecta cálculos de pérdida ni listados. */
+  isPaid: boolean;
+  paidAt: string | null;
   lines: TicketLine[];
   createdAt: string;
   updatedAt: string;

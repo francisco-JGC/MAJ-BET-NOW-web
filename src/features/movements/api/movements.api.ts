@@ -9,6 +9,8 @@ import type {
   Movement,
   MovementsBalanceParams,
   MovementsBalanceResponse,
+  SellerMovementsBalanceParams,
+  SellerMovementsBalanceResponse,
 } from '@/features/movements/types';
 
 export async function listMovements(
@@ -46,6 +48,25 @@ export async function getBranchFlow(
     {
       params: {
         salePointId: params.salePointId,
+        from: params.from || undefined,
+        to: params.to || undefined,
+      },
+    },
+  );
+  return data;
+}
+
+export async function getSellerMovementsBalance(
+  params: SellerMovementsBalanceParams,
+): Promise<SellerMovementsBalanceResponse> {
+  const { data } = await http.get<SellerMovementsBalanceResponse>(
+    '/movements/seller-balance',
+    {
+      params: {
+        salePointIds:
+          params.salePointIds && params.salePointIds.length > 0
+            ? params.salePointIds.join(',')
+            : undefined,
         from: params.from || undefined,
         to: params.to || undefined,
       },

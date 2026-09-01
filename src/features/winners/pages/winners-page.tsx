@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Calendar,
+  CheckCircle2,
   Dices,
   MapPin,
   Search,
@@ -322,6 +323,12 @@ function WinnerCard({
           </p>
           <p className="text-xs text-muted-foreground">{drawAt}</p>
         </div>
+        {ticket.isPaid && (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20">
+            <CheckCircle2 className="size-3" strokeWidth={2.5} />
+            Pagado
+          </span>
+        )}
       </div>
 
       <div className="flex items-end justify-between gap-3">

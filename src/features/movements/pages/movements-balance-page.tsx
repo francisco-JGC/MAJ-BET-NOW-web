@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 
 import { useMovementsBalance } from '@/features/movements/hooks/use-movements-balance';
+import { useSellerMovementsBalance } from '@/features/movements/hooks/use-seller-movements-balance';
 import { useSellerReport } from '@/features/reports/hooks/use-seller-report';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { cn } from '@/shared/lib/cn';
@@ -24,7 +25,7 @@ import { shareCardImage } from '@/shared/lib/share-whatsapp';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { Select } from '@/shared/ui/select';
 
-import type { MovementsBalanceRow } from '@/features/movements/types';
+import type { MovementsBalanceRow, SellerMovementsBalanceRow } from '@/features/movements/types';
 import type { SellerReportRow } from '@/features/reports/types';
 
 function isoDate(d: Date): string {
@@ -66,13 +67,8 @@ export function MovementsBalancePage() {
   );
 
   const balanceQuery = useMovementsBalance(rangeParams);
-  // No pasamos `sellerId` a la query — traemos TODOS los vendedores en
-  // scope (respetando sucursal + partner scope + rango) y filtramos
-  // localmente. Con esto el dropdown se puebla con la misma fuente,
-  // evitando el bug donde `useUsers` con partner scoping (por
-  // `createdById`) devolvía lista vacía si los sellers fueron creados
-  // por un admin y no por el partner logueado.
   const sellerQuery = useSellerReport(rangeParams);
+  const sellerBalanceQuery = useSellerMovementsBalance(rangeParams);
 
   const { data: salePoints } = useSalePoints();
 
@@ -81,6 +77,9 @@ export function MovementsBalancePage() {
   const sellerRows = sellerId
     ? allSellerRows.filter((s) => s.sellerId === sellerId)
     : allSellerRows;
+  const sellerBalanceById = new Map(
+    (sellerBalanceQuery.data?.items ?? []).map((r) => [r.sellerId, r]),
+  );
 
   return (
     <div className="space-y-6">
@@ -131,6 +130,7 @@ export function MovementsBalancePage() {
         ) : (
           <SellerCards
             rows={sellerRows}
+            sellerBalanceById={sellerBalanceById}
             loading={sellerQuery.isLoading}
             showSalary={showSalary}
           />
@@ -499,10 +499,12 @@ function BranchCard({
 
 function SellerCards({
   rows,
+  sellerBalanceById,
   loading,
   showSalary,
 }: {
   rows: SellerReportRow[];
+  sellerBalanceById: Map<string, SellerMovementsBalanceRow>;
   loading: boolean;
   showSalary: boolean;
 }) {
@@ -521,7 +523,12 @@ function SellerCards({
   return (
     <CardsScroller>
       {rows.map((row) => (
-        <SellerCard key={row.sellerId} row={row} showSalary={showSalary} />
+        <SellerCard
+          key={row.sellerId}
+          row={row}
+          movements={sellerBalanceById.get(row.sellerId)}
+          showSalary={showSalary}
+        />
       ))}
     </CardsScroller>
   );
@@ -529,21 +536,24 @@ function SellerCards({
 
 function SellerCard({
   row,
+  movements,
   showSalary,
 }: {
   row: SellerReportRow;
+  movements?: SellerMovementsBalanceRow;
   showSalary: boolean;
 }) {
   const cardRef = useRef<HTMLElement>(null);
-  // Ganancia neta del vendedor = ventas − premios que debería entregar
-  // − su propio salario (comisión). Movimientos (depósitos/retiros/gastos)
-  // no entran porque son a nivel sucursal, no del vendedor.
-  //
-  // Con el toggle "Salarios" apagado, tampoco se descuenta el salario del
-  // vendedor — el vendedor quiere ver el neto sin ese costo.
-  const net =
-    row.billed - row.wonPrize - (showSalary ? row.salary ?? 0 : 0);
+  const cobros = movements?.cobros ?? 0;
+  const credits = movements?.credits ?? 0;
+  const prizePayments = movements?.prizePayments ?? 0;
+  // Net = lo que el vendedor aún debe al admin:
+  //   billed − wonPrize − salary − cobros + credits
+  // Si es negativo, el admin le debe al vendedor (crédito a favor).
+  const salary = showSalary ? (row.salary ?? 0) : 0;
+  const net = row.billed - row.wonPrize - salary - cobros + credits;
   const isPositive = net >= 0;
+  const hasCobros = cobros > 0 || credits > 0;
   return (
     <article
       ref={cardRef}
@@ -572,34 +582,50 @@ function SellerCard({
           phone={row.sellerPhone}
           disabledReason={null}
           fileName={`vendedor-${row.sellerName.replace(/\s+/g, '-').toLowerCase()}.png`}
-          message={`Reporte de ${row.sellerName} — Vendido: ${formatCurrency(row.billed)}.`}
+          message={`Reporte de ${row.sellerName} — Pendiente: ${formatCurrency(net)}.`}
         />
       </header>
 
-      <NetBanner value={net} />
+      <NetBanner value={net} label="Pendiente" />
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <Stat label="Vendido" value={row.billed} tone="emerald" />
-        <Stat
-          label="Premios ganados"
-          value={row.wonPrize}
-          tone="rose"
-          className={showSalary ? undefined : 'col-span-2'}
-        />
+        <Stat label="Premios ganados" value={row.wonPrize} tone="rose" />
         {showSalary && (
           <Stat
             label={
               row.paymentPercentage !== null
-                ? `Salario (${row.paymentPercentage}%)`
-                : 'Salario'
+                ? `Comisión (${row.paymentPercentage}%)`
+                : 'Comisión'
             }
             value={row.salary ?? 0}
             tone="indigo"
-            hint={
-              row.paymentPercentage === null
-                ? 'Sin % configurado'
-                : undefined
-            }
+            hint={row.paymentPercentage === null ? 'Sin % configurado' : undefined}
+          />
+        )}
+        {hasCobros && (
+          <Stat
+            label="Cobrado"
+            value={cobros}
+            tone="emerald"
+            hint="Dinero recibido del vendedor"
+          />
+        )}
+        {credits > 0 && (
+          <Stat
+            label="Créditos"
+            value={credits}
+            tone="rose"
+            hint="Devuelto al vendedor"
+          />
+        )}
+        {prizePayments > 0 && (
+          <Stat
+            label="Premios pagados"
+            value={prizePayments}
+            tone="neutral"
+            hint="Marcados como pago de premio"
+            className="col-span-2"
           />
         )}
       </dl>
@@ -607,7 +633,7 @@ function SellerCard({
   );
 }
 
-function NetBanner({ value }: { value: number }) {
+function NetBanner({ value, label = 'Restante' }: { value: number; label?: string }) {
   const isPositive = value >= 0;
   return (
     <div
@@ -630,7 +656,7 @@ function NetBanner({ value }: { value: number }) {
             isPositive ? 'text-emerald-700' : 'text-rose-700',
           )}
         >
-          Restante
+          {label}
         </span>
       </div>
       <span

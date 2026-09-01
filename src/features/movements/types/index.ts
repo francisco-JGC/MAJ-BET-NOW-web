@@ -11,7 +11,9 @@ export type MovementType = (typeof MovementType)[keyof typeof MovementType];
 
 export interface Movement {
   id: string;
-  salePointId: string;
+  salePointId: string | null;
+  sellerId: string | null;
+  isPrizePayment: boolean;
   type: MovementType;
   amount: number;
   description: string;
@@ -78,19 +80,37 @@ export interface ListMovementsResponse {
 }
 
 export interface CreateMovementPayload {
-  salePointId: string;
+  /** Required for sucursal movements. Omit when sellerId is provided. */
+  salePointId?: string;
+  /** When set, creates a seller-level movement. */
+  sellerId?: string;
+  isPrizePayment?: boolean;
   type: MovementType;
   amount: number;
   description?: string;
   /** ISO 8601. Optional — server defaults to now. */
   occurredAt?: string;
-  /**
-   * UUID v4 opcional para dedupear reintentos. El modal genera uno al
-   * abrirse; si el usuario tapea "Guardar" dos veces o hay retry por
-   * timeout, la segunda request cae en el mismo id y el backend
-   * devuelve el movement ya creado en vez de duplicarlo.
-   */
   clientRequestId?: string;
+}
+
+export interface SellerMovementsBalanceRow {
+  sellerId: string;
+  /** SUM of DEPOSIT movements to this seller (admin collected from seller). */
+  cobros: number;
+  /** SUM of WITHDRAWAL movements (admin gave back to seller). */
+  credits: number;
+  /** SUM of movements flagged as prize payments. */
+  prizePayments: number;
+}
+
+export interface SellerMovementsBalanceParams {
+  salePointIds?: string[];
+  from?: string;
+  to?: string;
+}
+
+export interface SellerMovementsBalanceResponse {
+  items: SellerMovementsBalanceRow[];
 }
 
 export type BranchFlowKind = 'ticket_sale' | 'prize_payout' | 'movement';

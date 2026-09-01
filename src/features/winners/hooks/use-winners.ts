@@ -1,6 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { listWinningTickets } from '@/features/winners/api/winners.api';
+import {
+  listWinningTickets,
+  markTicketAsPaid,
+} from '@/features/winners/api/winners.api';
 import { toApiError } from '@/shared/api/error-mapper';
 
 import type {
@@ -26,5 +29,23 @@ export function useWinners(params: ListWinnersParams) {
       }
     },
     placeholderData: (prev) => prev,
+  });
+}
+
+export function useMarkTicketAsPaid() {
+  const queryClient = useQueryClient();
+  return useMutation<{ isPaid: boolean; paidAt: string | null }, ApiError, string>({
+    mutationFn: async (ticketId) => {
+      try {
+        return await markTicketAsPaid(ticketId);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    onSuccess: () => {
+      // Refresca todos los listados de ganadores para que el badge "Pagado"
+      // aparezca inmediatamente sin necesidad de recargar la página.
+      void queryClient.invalidateQueries({ queryKey: winnersQueryKeys.all });
+    },
   });
 }

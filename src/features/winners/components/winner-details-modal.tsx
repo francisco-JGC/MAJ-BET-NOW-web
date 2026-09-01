@@ -1,7 +1,9 @@
-import { ExternalLink, Trophy } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Trophy } from 'lucide-react';
 
+import { cn } from '@/shared/lib/cn';
 import { formatCurrency } from '@/shared/lib/format';
 import { Modal } from '@/shared/ui/modal';
+import { useMarkTicketAsPaid } from '@/features/winners/hooks/use-winners';
 
 import type { WinningTicket } from '@/features/winners/types';
 
@@ -26,6 +28,8 @@ export function WinnerDetailsModal({
   onClose,
   onViewTicket,
 }: Props) {
+  const payMutation = useMarkTicketAsPaid();
+
   if (!winner) return null;
 
   const { ticket, totalPrize, lines } = winner;
@@ -49,13 +53,32 @@ export function WinnerDetailsModal({
       description={`${gameName ?? 'Juego'} · ${drawAt}`}
       size="max-w-2xl"
       footer={
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary"
-        >
-          Cerrar
-        </button>
+        <div className="flex items-center gap-2">
+          {!ticket.isPaid && (
+            <button
+              type="button"
+              disabled={payMutation.isPending}
+              onClick={() => payMutation.mutate(ticket.id)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              <CheckCircle2 className="size-4" strokeWidth={2.4} />
+              {payMutation.isPending ? 'Procesando…' : 'Marcar como pagado'}
+            </button>
+          )}
+          {ticket.isPaid && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20">
+              <CheckCircle2 className="size-4" strokeWidth={2.4} />
+              Boleto pagado
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary"
+          >
+            Cerrar
+          </button>
+        </div>
       }
     >
       <div className="space-y-5">

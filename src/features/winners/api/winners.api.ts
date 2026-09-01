@@ -2,6 +2,7 @@ import { http } from '@/shared/api/http';
 
 import type {
   ListWinnersParams,
+  Ticket,
   WinningTicket,
 } from '@/features/winners/types';
 
@@ -19,5 +20,10 @@ export async function listWinningTickets(
       search: params.search || undefined,
     },
   });
+  return data;
+}
+
+export async function markTicketAsPaid(ticketId: string): Promise<Ticket> {
+  const { data } = await http.post<Ticket>(`/tickets/${ticketId}/pay`);
   return data;
 }
