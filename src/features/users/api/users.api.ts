@@ -34,3 +34,19 @@ export async function updateUser(
   const { data } = await http.patch<User>(`/users/${id}`, payload);
   return data;
 }
+
+/**
+ * Configura el "Modo vendedor" del admin logueado. El backend valida
+ * que quien llama sea admin y que — si activa el modo — la sucursal
+ * elegida exista y esté activa.
+ */
+export async function updateMyMobileSalesProfile(payload: {
+  mobileSalesEnabled: boolean;
+  defaultSalePointId: string | null;
+}): Promise<User> {
+  const { data } = await http.patch<User>(
+    '/users/me/mobile-sales',
+    payload,
+  );
+  return data;
+}
