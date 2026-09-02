@@ -9,12 +9,11 @@ import {
   DoorOpen,
   ListChecks,
   MapPin,
-  Pencil,
   Plus,
   Scale,
   Tag,
   Trash2,
-  User as UserIcon,
+  User,
   Wallet,
 } from 'lucide-react';
 
@@ -93,6 +92,20 @@ const TYPE_META: Record<
   },
 };
 
+/** Override labels for seller-level movements (sellerId != null). */
+const SELLER_TYPE_META: Partial<Record<MovementType, { label: string; classes: string; icon: React.ReactNode }>> = {
+  [MovementType.DEPOSIT]: {
+    label: 'Cobro',
+    classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
+    icon: <ArrowUpRight className="size-3" strokeWidth={2.6} />,
+  },
+  [MovementType.WITHDRAWAL]: {
+    label: 'Crédito',
+    classes: 'bg-blue-500/10 text-blue-700 ring-blue-500/20',
+    icon: <Wallet className="size-3" strokeWidth={2.6} />,
+  },
+};
+
 /** Sign shown next to the amount so the reader knows if it adds or subtracts. */
 const TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
   [MovementType.EXPENSE]: '-',
@@ -111,7 +124,6 @@ export function MovementsPage() {
   const [to, setTo] = useState(isoDate(new Date()));
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
-  const [editMovement, setEditMovement] = useState<Movement | null>(null);
 
   const params = useMemo(
     () => ({
@@ -198,7 +210,7 @@ export function MovementsPage() {
                 setSalePointId('');
                 setPage(0);
               }}
-              leadingIcon={<UserIcon className="size-4" />}
+              leadingIcon={<User className="size-4" />}
               placeholder="Todos"
               options={[
                 { value: '', label: 'Todos los vendedores' },
@@ -315,7 +327,6 @@ export function MovementsPage() {
                         ? userById.get(m.createdById)?.name ?? '—'
                         : '—'
                     }
-                    onEdit={() => setEditMovement(m)}
                     onDelete={() => deleteMovement.mutate(m.id)}
                     deleting={
                       deleteMovement.isPending &&
@@ -380,11 +391,6 @@ export function MovementsPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
-      <CreateMovementModal
-        open={!!editMovement}
-        onClose={() => setEditMovement(null)}
-        editMovement={editMovement ?? undefined}
-      />
     </div>
   );
 }
@@ -394,7 +400,6 @@ function MovementRow({
   destinationName,
   destinationKind,
   createdByName,
-  onEdit,
   onDelete,
   deleting,
 }: {
@@ -402,11 +407,14 @@ function MovementRow({
   destinationName: string;
   destinationKind: 'branch' | 'seller';
   createdByName: string;
-  onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
-  const meta = TYPE_META[movement.type];
+  const isSeller = destinationKind === 'seller';
+  const meta =
+    isSeller
+      ? (SELLER_TYPE_META[movement.type] ?? TYPE_META[movement.type])
+      : TYPE_META[movement.type];
   const sign = TYPE_SIGN[movement.type];
   const amountColor =
     sign === '+'
@@ -422,7 +430,7 @@ function MovementRow({
       <td className="px-6 py-3.5">
         <div className="flex items-center gap-1.5">
           {destinationKind === 'seller'
-            ? <UserIcon className="size-3.5 shrink-0 text-indigo-500" />
+            ? <User className="size-3.5 shrink-0 text-indigo-500" />
             : <MapPin className="size-3.5 shrink-0 text-emerald-600" />}
           <span className="text-foreground">{destinationName}</span>
         </div>
@@ -447,34 +455,24 @@ function MovementRow({
       </td>
       <td className="px-6 py-3.5 text-muted-foreground">{createdByName}</td>
       <td className="px-6 py-3.5 text-right">
-        <div className="flex items-center justify-end gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-500/10"
-            aria-label="Editar"
-          >
-            <Pencil className="size-3.5" strokeWidth={2.4} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (
-                window.confirm('¿Eliminar este movimiento? No se puede deshacer.')
-              ) {
-                onDelete();
-              }
-            }}
-            disabled={deleting}
-            className={cn(
-              'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/10',
-              deleting && 'cursor-not-allowed opacity-60',
-            )}
-            aria-label="Eliminar"
-          >
-            <Trash2 className="size-3.5" strokeWidth={2.4} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              window.confirm('¿Eliminar este movimiento? No se puede deshacer.')
+            ) {
+              onDelete();
+            }
+          }}
+          disabled={deleting}
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/10',
+            deleting && 'cursor-not-allowed opacity-60',
+          )}
+          aria-label="Eliminar"
+        >
+          <Trash2 className="size-3.5" strokeWidth={2.4} />
+        </button>
       </td>
     </tr>
   );
