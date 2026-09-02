@@ -55,7 +55,7 @@ export function MovementsBalancePage() {
   const [sellerId, setSellerId] = useState('');
   const [from, setFrom] = useState(isoDate(new Date()));
   const [to, setTo] = useState(isoDate(new Date()));
-  const [showSalary, setShowSalary] = useState(true);
+  const [showSalary, setShowSalary] = useState(false);
 
   const rangeParams = useMemo(
     () => ({
