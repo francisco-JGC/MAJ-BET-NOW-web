@@ -7,6 +7,7 @@ import type {
   ListMovementsParams,
   ListMovementsResponse,
   Movement,
+  MovementType,
   MovementsBalanceParams,
   MovementsBalanceResponse,
   SellerMovementsBalanceParams,
