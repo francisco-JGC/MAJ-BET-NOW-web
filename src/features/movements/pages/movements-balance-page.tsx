@@ -616,7 +616,7 @@ function SellerCard({
             label="Créditos"
             value={credits}
             tone="rose"
-            hint="Devuelto al vendedor"
+            hint="Ajuste de premio"
           />
         )}
         {prizePayments > 0 && (
