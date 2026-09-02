@@ -13,7 +13,7 @@ import {
   Scale,
   Tag,
   Trash2,
-  User as UserIcon,
+  User,
   Wallet,
 } from 'lucide-react';
 
@@ -129,10 +129,8 @@ export function MovementsPage() {
   const total = data?.total ?? 0;
 
   const { data: salePoints } = useSalePoints();
+  const { data: usersPage } = useUsers({ limit: 200, offset: 0 });
   const { data: sellersPage } = useUsers({ role: UserRole.SELLER, limit: 200, offset: 0 });
-  // Users list resolves creator names; role isn't restricted because the
-  // creator can be admin OR partner.
-  const { data: usersPage } = useUsers({ limit: 100, offset: 0 });
 
   const salePointById = useMemo(() => {
     const m = new Map<string, SalePoint>();
@@ -144,11 +142,6 @@ export function MovementsPage() {
     for (const u of usersPage?.items ?? []) m.set(u.id, u);
     return m;
   }, [usersPage]);
-  const sellerById = useMemo(() => {
-    const m = new Map<string, User>();
-    for (const u of sellersPage?.items ?? []) m.set(u.id, u);
-    return m;
-  }, [sellersPage]);
 
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
@@ -175,13 +168,13 @@ export function MovementsPage() {
       </header>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Sucursal">
             <Select
               value={salePointId}
               onChange={(v) => {
                 setSalePointId(v);
-                if (v) setSellerId('');
+                setSellerId('');
                 setPage(0);
               }}
               leadingIcon={<MapPin className="size-4" />}
@@ -200,10 +193,10 @@ export function MovementsPage() {
               value={sellerId}
               onChange={(v) => {
                 setSellerId(v);
-                if (v) setSalePointId('');
+                setSalePointId('');
                 setPage(0);
               }}
-              leadingIcon={<UserIcon className="size-4" />}
+              leadingIcon={<User className="size-4" />}
               placeholder="Todos"
               options={[
                 { value: '', label: 'Todos los vendedores' },
@@ -232,6 +225,8 @@ export function MovementsPage() {
               ]}
             />
           </Field>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Desde">
             <div className="relative">
               <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -282,7 +277,7 @@ export function MovementsPage() {
             <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
                 <th className="px-6 py-3">Fecha</th>
-                <th className="px-6 py-3">Sucursal</th>
+                <th className="px-6 py-3">Destino</th>
                 <th className="px-6 py-3">Tipo</th>
                 <th className="px-6 py-3">Descripción</th>
                 <th className="px-6 py-3 text-right">Monto</th>
@@ -307,14 +302,12 @@ export function MovementsPage() {
                   <MovementRow
                     key={m.id}
                     movement={m}
-                    salePointName={
-                      m.salePointId
-                        ? (salePointById.get(m.salePointId)?.name ?? '—')
-                        : m.sellerId
-                          ? (sellerById.get(m.sellerId)?.name ?? '—')
-                          : '—'
+                    destinationName={
+                      m.sellerId
+                        ? userById.get(m.sellerId)?.name ?? '—'
+                        : salePointById.get(m.salePointId ?? '')?.name ?? '—'
                     }
-                    isSeller={!m.salePointId && !!m.sellerId}
+                    destinationKind={m.sellerId ? 'seller' : 'branch'}
                     createdByName={
                       m.createdById
                         ? userById.get(m.createdById)?.name ?? '—'
@@ -390,15 +383,15 @@ export function MovementsPage() {
 
 function MovementRow({
   movement,
-  salePointName,
-  isSeller,
+  destinationName,
+  destinationKind,
   createdByName,
   onDelete,
   deleting,
 }: {
   movement: Movement;
-  salePointName: string;
-  isSeller: boolean;
+  destinationName: string;
+  destinationKind: 'branch' | 'seller';
   createdByName: string;
   onDelete: () => void;
   deleting: boolean;
@@ -416,15 +409,12 @@ function MovementRow({
       <td className="px-6 py-3.5 text-muted-foreground">
         {formatManaguaDate(movement.occurredAt)}
       </td>
-      <td className="px-6 py-3.5 text-foreground">
+      <td className="px-6 py-3.5">
         <div className="flex items-center gap-1.5">
-          {isSeller && (
-            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/20">
-              <UserIcon className="size-2.5" />
-              Vendedor
-            </span>
-          )}
-          {salePointName}
+          {destinationKind === 'seller'
+            ? <User className="size-3.5 shrink-0 text-indigo-500" />
+            : <MapPin className="size-3.5 shrink-0 text-emerald-600" />}
+          <span className="text-foreground">{destinationName}</span>
         </div>
       </td>
       <td className="px-6 py-3.5">
