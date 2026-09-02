@@ -1,6 +1,5 @@
 import { CheckCircle2, ExternalLink, Trophy } from 'lucide-react';
 
-import { cn } from '@/shared/lib/cn';
 import { formatCurrency } from '@/shared/lib/format';
 import { Modal } from '@/shared/ui/modal';
 import { useMarkTicketAsPaid } from '@/features/winners/hooks/use-winners';
