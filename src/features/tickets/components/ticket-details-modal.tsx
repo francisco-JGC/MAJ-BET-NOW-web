@@ -71,8 +71,7 @@ export function TicketDetailsModal({
 
   if (!ticket) return null;
 
-  const canVoid =
-    isAdmin && ticket.status === 'valid' && !ticket.drawExecuted;
+  const canVoid = isAdmin && ticket.status === 'valid';
 
   const handleVoid = async () => {
     if (isPending) return;
