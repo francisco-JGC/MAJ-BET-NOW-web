@@ -13,7 +13,7 @@ import {
   Scale,
   Tag,
   Trash2,
-  User,
+  User as UserIcon,
   Wallet,
 } from 'lucide-react';
 
@@ -210,7 +210,7 @@ export function MovementsPage() {
                 setSalePointId('');
                 setPage(0);
               }}
-              leadingIcon={<User className="size-4" />}
+              leadingIcon={<UserIcon className="size-4" />}
               placeholder="Todos"
               options={[
                 { value: '', label: 'Todos los vendedores' },
@@ -430,7 +430,7 @@ function MovementRow({
       <td className="px-6 py-3.5">
         <div className="flex items-center gap-1.5">
           {destinationKind === 'seller'
-            ? <User className="size-3.5 shrink-0 text-indigo-500" />
+            ? <UserIcon className="size-3.5 shrink-0 text-indigo-500" />
             : <MapPin className="size-3.5 shrink-0 text-emerald-600" />}
           <span className="text-foreground">{destinationName}</span>
         </div>
