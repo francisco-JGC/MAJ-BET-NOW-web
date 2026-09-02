@@ -16,7 +16,6 @@ import {
   Trophy,
   User,
   UserSearch,
-  Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -70,7 +69,6 @@ const NAV_ITEMS: readonly NavItem[] = [
     icon: Hash,
   },
   { to: APP_ROUTES.winners, label: 'Ganadores', icon: Trophy },
-  { to: APP_ROUTES.expenses, label: 'Gastos', icon: Wallet },
   { to: APP_ROUTES.movements, label: 'Movimientos', icon: Repeat },
   {
     to: APP_ROUTES.movementsCalc,

@@ -14,7 +14,8 @@ import {
   Wallet,
 } from 'lucide-react';
 
-import { useCreateMovement } from '@/features/movements/hooks/use-movements';
+import { useCreateMovement, useUpdateMovement } from '@/features/movements/hooks/use-movements';
+import type { Movement } from '@/features/movements/types';
 import { MovementType } from '@/features/movements/types';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useUsers } from '@/features/users/hooks/use-users';
@@ -30,6 +31,8 @@ interface Props {
   defaultType?: MovementType;
   /** When provided, pre-selects seller mode with this seller. */
   defaultSellerId?: string;
+  /** When provided, the modal works in edit mode for this movement. */
+  editMovement?: Movement;
 }
 
 type TargetMode = 'sucursal' | 'seller';
@@ -132,7 +135,9 @@ export function CreateMovementModal({
   defaultSalePointId,
   defaultType,
   defaultSellerId,
+  editMovement,
 }: Props) {
+  const isEdit = !!editMovement;
   const [form, setForm] = useState<FormState>(EMPTY);
   const [clientRequestId, setClientRequestId] = useState<string>('');
 
@@ -142,25 +147,47 @@ export function CreateMovementModal({
     limit: 200,
     offset: 0,
   });
-  const { mutateAsync, isPending, error, reset } = useCreateMovement();
+  const createMutation = useCreateMovement();
+  const updateMutation = useUpdateMovement();
+  const isPending = isEdit ? updateMutation.isPending : createMutation.isPending;
+  const error = isEdit ? updateMutation.error : createMutation.error;
 
   useEffect(() => {
     if (open) {
-      const mode: TargetMode = defaultSellerId ? 'seller' : 'sucursal';
-      setForm({
-        ...EMPTY,
-        targetMode: mode,
-        salePointId: defaultSalePointId ?? '',
-        sellerId: defaultSellerId ?? '',
-        type: defaultType ?? (mode === 'seller' ? MovementType.DEPOSIT : MovementType.EXPENSE),
-      });
-      reset();
+      if (editMovement) {
+        const mode: TargetMode = editMovement.sellerId ? 'seller' : 'sucursal';
+        const occurredDate = editMovement.occurredAt
+          ? isoDate(new Date(editMovement.occurredAt))
+          : isoDate(new Date());
+        setForm({
+          targetMode: mode,
+          salePointId: editMovement.salePointId ?? '',
+          sellerId: editMovement.sellerId ?? '',
+          type: editMovement.type,
+          amount: String(editMovement.amount),
+          description: editMovement.description ?? '',
+          occurredDate,
+          isPrizePayment: editMovement.isPrizePayment,
+        });
+      } else {
+        const mode: TargetMode = defaultSellerId ? 'seller' : 'sucursal';
+        setForm({
+          ...EMPTY,
+          targetMode: mode,
+          salePointId: defaultSalePointId ?? '',
+          sellerId: defaultSellerId ?? '',
+          type: defaultType ?? (mode === 'seller' ? MovementType.DEPOSIT : MovementType.EXPENSE),
+        });
+      }
+      createMutation.reset();
+      updateMutation.reset();
     }
-  }, [open, defaultSalePointId, defaultType, defaultSellerId, reset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
-    if (open) setClientRequestId(crypto.randomUUID());
-  }, [open]);
+    if (open && !isEdit) setClientRequestId(crypto.randomUUID());
+  }, [open, isEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -188,16 +215,27 @@ export function CreateMovementModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid || isPending) return;
-    await mutateAsync({
-      salePointId: form.targetMode === 'sucursal' ? form.salePointId : undefined,
-      sellerId: form.targetMode === 'seller' ? form.sellerId : undefined,
-      isPrizePayment: form.isPrizePayment,
-      type: form.type,
-      amount: parsedAmount,
-      description: form.description.trim() || undefined,
-      occurredAt: `${form.occurredDate}T00:00:00-06:00`,
-      clientRequestId,
-    });
+    if (isEdit && editMovement) {
+      await updateMutation.mutateAsync({
+        id: editMovement.id,
+        type: form.type,
+        amount: parsedAmount,
+        description: form.description.trim() || undefined,
+        occurredAt: `${form.occurredDate}T00:00:00-06:00`,
+        isPrizePayment: form.isPrizePayment,
+      });
+    } else {
+      await createMutation.mutateAsync({
+        salePointId: form.targetMode === 'sucursal' ? form.salePointId : undefined,
+        sellerId: form.targetMode === 'seller' ? form.sellerId : undefined,
+        isPrizePayment: form.isPrizePayment,
+        type: form.type,
+        amount: parsedAmount,
+        description: form.description.trim() || undefined,
+        occurredAt: `${form.occurredDate}T00:00:00-06:00`,
+        clientRequestId,
+      });
+    }
     onClose();
   };
 
@@ -208,8 +246,8 @@ export function CreateMovementModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Registrar movimiento"
-      description="Los movimientos entran al cálculo según su tipo."
+      title={isEdit ? 'Editar movimiento' : 'Registrar movimiento'}
+      description={isEdit ? 'Solo puedes cambiar el tipo, monto, descripción y fecha.' : 'Los movimientos entran al cálculo según su tipo.'}
       size="max-w-xl"
       footer={
         <>
@@ -236,7 +274,7 @@ export function CreateMovementModal({
             ) : (
               <Save className="size-4" strokeWidth={2.4} />
             )}
-            Guardar
+            {isEdit ? 'Actualizar' : 'Guardar'}
           </button>
         </>
       }
@@ -246,56 +284,60 @@ export function CreateMovementModal({
         onSubmit={handleSubmit}
         className="space-y-4"
       >
-        {/* Target mode toggle */}
-        <div className="flex rounded-lg border border-border bg-secondary/40 p-1 gap-1">
-          <ModeTab
-            label="Sucursal"
-            icon={<MapPin className="size-3.5" />}
-            active={form.targetMode === 'sucursal'}
-            onClick={() => switchMode('sucursal')}
-          />
-          <ModeTab
-            label="Vendedor"
-            icon={<User className="size-3.5" />}
-            active={form.targetMode === 'seller'}
-            onClick={() => switchMode('seller')}
-          />
-        </div>
+        {/* Target mode toggle — oculto en modo edición (no se cambia el destinatario) */}
+        {!isEdit && (
+          <>
+            <div className="flex rounded-lg border border-border bg-secondary/40 p-1 gap-1">
+              <ModeTab
+                label="Sucursal"
+                icon={<MapPin className="size-3.5" />}
+                active={form.targetMode === 'sucursal'}
+                onClick={() => switchMode('sucursal')}
+              />
+              <ModeTab
+                label="Vendedor"
+                icon={<User className="size-3.5" />}
+                active={form.targetMode === 'seller'}
+                onClick={() => switchMode('seller')}
+              />
+            </div>
 
-        {form.targetMode === 'sucursal' ? (
-          <Field label="Sucursal" required>
-            <Select
-              value={form.salePointId}
-              onChange={(v) => set('salePointId', v)}
-              leadingIcon={<MapPin className="size-4" />}
-              placeholder={
-                loadingSalePoints ? 'Cargando…' : 'Seleccione una sucursal'
-              }
-              disabled={loadingSalePoints}
-              options={
-                salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ??
-                []
-              }
-            />
-          </Field>
-        ) : (
-          <Field label="Vendedor" required>
-            <Select
-              value={form.sellerId}
-              onChange={(v) => set('sellerId', v)}
-              leadingIcon={<User className="size-4" />}
-              placeholder={
-                loadingSellers ? 'Cargando…' : 'Seleccione un vendedor'
-              }
-              disabled={loadingSellers}
-              options={
-                sellersData?.items.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })) ?? []
-              }
-            />
-          </Field>
+            {form.targetMode === 'sucursal' ? (
+              <Field label="Sucursal" required>
+                <Select
+                  value={form.salePointId}
+                  onChange={(v) => set('salePointId', v)}
+                  leadingIcon={<MapPin className="size-4" />}
+                  placeholder={
+                    loadingSalePoints ? 'Cargando…' : 'Seleccione una sucursal'
+                  }
+                  disabled={loadingSalePoints}
+                  options={
+                    salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ??
+                    []
+                  }
+                />
+              </Field>
+            ) : (
+              <Field label="Vendedor" required>
+                <Select
+                  value={form.sellerId}
+                  onChange={(v) => set('sellerId', v)}
+                  leadingIcon={<User className="size-4" />}
+                  placeholder={
+                    loadingSellers ? 'Cargando…' : 'Seleccione un vendedor'
+                  }
+                  disabled={loadingSellers}
+                  options={
+                    sellersData?.items.map((u) => ({
+                      value: u.id,
+                      label: u.name,
+                    })) ?? []
+                  }
+                />
+              </Field>
+            )}
+          </>
         )}
 
         <Field label="Tipo" required>

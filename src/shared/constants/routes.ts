@@ -15,7 +15,6 @@ export const APP_ROUTES = {
   billing: '/facturacion',
   salesByNumber: '/ventas-por-numero',
   winners: '/ganadores',
-  expenses: '/gastos',
   movements: '/movimientos',
   movementsCalc: '/calculo-movimientos',
   users: '/usuarios',

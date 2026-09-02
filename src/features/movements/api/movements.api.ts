@@ -37,6 +37,22 @@ export async function createMovement(
   return data;
 }
 
+export interface UpdateMovementPayload {
+  type?: MovementType;
+  amount?: number;
+  description?: string;
+  occurredAt?: string;
+  isPrizePayment?: boolean;
+}
+
+export async function updateMovement(
+  id: string,
+  payload: UpdateMovementPayload,
+): Promise<Movement> {
+  const { data } = await http.patch<Movement>(`/movements/${id}`, payload);
+  return data;
+}
+
 export async function deleteMovement(id: string): Promise<void> {
   await http.delete(`/movements/${id}`);
 }

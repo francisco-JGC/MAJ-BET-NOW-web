@@ -5,9 +5,11 @@ import {
   createMovement,
   deleteMovement,
   listMovements,
+  updateMovement,
 } from '@/features/movements/api/movements.api';
 import { toApiError } from '@/shared/api/error-mapper';
 
+import type { UpdateMovementPayload } from '@/features/movements/api/movements.api';
 import type {
   CreateMovementPayload,
   ListMovementsParams,
@@ -54,6 +56,29 @@ export function useCreateMovement() {
     },
     onError: (error) => {
       toast.error('No se pudo registrar el movimiento', {
+        description: error.message,
+      });
+    },
+  });
+}
+
+export function useUpdateMovement() {
+  const qc = useQueryClient();
+  return useMutation<Movement, ApiError, { id: string } & UpdateMovementPayload>({
+    mutationFn: async ({ id, ...payload }) => {
+      try {
+        return await updateMovement(id, payload);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    onSuccess: () => {
+      toast.success('Movimiento actualizado');
+      qc.invalidateQueries({ queryKey: movementsQueryKeys.all });
+      qc.invalidateQueries({ queryKey: ['movements-balance'] });
+    },
+    onError: (error) => {
+      toast.error('No se pudo actualizar el movimiento', {
         description: error.message,
       });
     },

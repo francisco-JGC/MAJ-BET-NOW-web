@@ -38,11 +38,6 @@ const BranchFlowPage = lazy(() =>
     default: m.BranchFlowPage,
   })),
 );
-const ExpensesPage = lazy(() =>
-  import('@/features/movements/pages/expenses-page').then((m) => ({
-    default: m.ExpensesPage,
-  })),
-);
 const MovementsBalancePage = lazy(() =>
   import('@/features/movements/pages/movements-balance-page').then((m) => ({
     default: m.MovementsBalancePage,
@@ -206,7 +201,6 @@ const router = createBrowserRouter([
               { path: APP_ROUTES.billing, element: <BillingPage /> },
               { path: APP_ROUTES.salesByNumber, element: <SalesByNumberPage /> },
               { path: APP_ROUTES.winners, element: <WinnersPage /> },
-              { path: APP_ROUTES.expenses, element: <ExpensesPage /> },
               { path: APP_ROUTES.movements, element: <MovementsPage /> },
               { path: APP_ROUTES.movementsCalc, element: <MovementsBalancePage /> },
               { path: APP_ROUTES.users, element: <UsersPage /> },
