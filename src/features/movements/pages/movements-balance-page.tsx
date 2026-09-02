@@ -4,7 +4,10 @@ import {
   ArrowUpRight,
   Calculator,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Handshake,
+  History,
   MapPin,
   Share2,
   Sigma,
@@ -15,8 +18,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useMovements } from '@/features/movements/hooks/use-movements';
 import { useMovementsBalance } from '@/features/movements/hooks/use-movements-balance';
 import { useSellerMovementsBalance } from '@/features/movements/hooks/use-seller-movements-balance';
+import { MovementType } from '@/features/movements/types';
 import { useSellerReport } from '@/features/reports/hooks/use-seller-report';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { cn } from '@/shared/lib/cn';
@@ -25,7 +30,7 @@ import { shareCardImage } from '@/shared/lib/share-whatsapp';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { Select } from '@/shared/ui/select';
 
-import type { MovementsBalanceRow, SellerMovementsBalanceRow } from '@/features/movements/types';
+import type { Movement, MovementsBalanceRow, SellerMovementsBalanceRow } from '@/features/movements/types';
 import type { SellerReportRow } from '@/features/reports/types';
 
 function isoDate(d: Date): string {
@@ -133,6 +138,8 @@ export function MovementsBalancePage() {
             sellerBalanceById={sellerBalanceById}
             loading={sellerQuery.isLoading}
             showSalary={showSalary}
+            from={rangeParams.from}
+            to={rangeParams.to}
           />
         )}
       </section>
@@ -502,11 +509,15 @@ function SellerCards({
   sellerBalanceById,
   loading,
   showSalary,
+  from,
+  to,
 }: {
   rows: SellerReportRow[];
   sellerBalanceById: Map<string, SellerMovementsBalanceRow>;
   loading: boolean;
   showSalary: boolean;
+  from?: string;
+  to?: string;
 }) {
   if (loading && rows.length === 0) {
     return (
@@ -528,9 +539,82 @@ function SellerCards({
           row={row}
           movements={sellerBalanceById.get(row.sellerId)}
           showSalary={showSalary}
+          from={from}
+          to={to}
         />
       ))}
     </CardsScroller>
+  );
+}
+
+const MOVEMENT_LABEL: Record<string, string> = {
+  [MovementType.DEPOSIT]: 'Cobro',
+  [MovementType.WITHDRAWAL]: 'Crédito',
+  [MovementType.ADJUSTMENT]: 'Ajuste',
+  [MovementType.EXPENSE]: 'Gasto',
+  [MovementType.OPENING]: 'Apertura de caja',
+  [MovementType.CLOSING]: 'Cierre de caja',
+};
+
+function MovementsSection({ sellerId, from, to }: { sellerId: string; from?: string; to?: string }) {
+  const { data, isLoading } = useMovements({
+    sellerId,
+    from,
+    to,
+    page: 1,
+    limit: 50,
+  });
+  const items = data?.items ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 space-y-1.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-8 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <p className="mt-3 text-center text-[11px] text-muted-foreground">
+        Sin movimientos en este período
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-3 divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60">
+      {items.map((m) => (
+        <MovementItem key={m.id} movement={m} />
+      ))}
+    </ul>
+  );
+}
+
+function MovementItem({ movement }: { movement: Movement }) {
+  const label = MOVEMENT_LABEL[movement.type] ?? movement.type;
+  const isPositive = movement.type === MovementType.DEPOSIT;
+  const amountClass = isPositive ? 'text-emerald-700' : 'text-rose-700';
+  const sign = isPositive ? '+' : '−';
+  return (
+    <li className="flex items-center gap-3 bg-background/60 px-3 py-2.5 text-xs">
+      <span
+        className={cn(
+          'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset',
+          isPositive
+            ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/20'
+            : 'bg-rose-50 text-rose-700 ring-rose-500/20',
+        )}
+      >
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-muted-foreground">
+        {movement.description || <span className="italic opacity-50">Sin descripción</span>}
+      </span>
+      <span className={cn('shrink-0 tabular-nums font-bold', amountClass)}>
+        {sign}{formatCurrency(movement.amount)}
+      </span>
+    </li>
   );
 }
 
@@ -538,12 +622,17 @@ function SellerCard({
   row,
   movements,
   showSalary,
+  from,
+  to,
 }: {
   row: SellerReportRow;
   movements?: SellerMovementsBalanceRow;
   showSalary: boolean;
+  from?: string;
+  to?: string;
 }) {
   const cardRef = useRef<HTMLElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const cobros = movements?.cobros ?? 0;
   const credits = movements?.credits ?? 0;
   const prizePayments = movements?.prizePayments ?? 0;
@@ -613,10 +702,10 @@ function SellerCard({
         )}
         {credits > 0 && (
           <Stat
-            label="Créditos"
+            label="Créditos al vendedor"
             value={credits}
             tone="rose"
-            hint="Ajuste de premio"
+            hint="Devolución o ajuste a favor"
           />
         )}
         {prizePayments > 0 && (
@@ -629,6 +718,25 @@ function SellerCard({
           />
         )}
       </dl>
+
+      {/* Historial de movimientos */}
+      <button
+        type="button"
+        data-share-hide="true"
+        onClick={() => setShowHistory((v) => !v)}
+        className="mt-4 flex w-full items-center justify-between rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:bg-muted/60 transition"
+      >
+        <span className="flex items-center gap-1.5">
+          <History className="size-3" strokeWidth={2.4} />
+          Historial de movimientos
+        </span>
+        {showHistory
+          ? <ChevronUp className="size-3.5" strokeWidth={2.4} />
+          : <ChevronDown className="size-3.5" strokeWidth={2.4} />}
+      </button>
+      {showHistory && (
+        <MovementsSection sellerId={row.sellerId} from={from} to={to} />
+      )}
     </article>
   );
 }
