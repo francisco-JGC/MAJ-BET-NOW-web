@@ -8,14 +8,15 @@ import {
   Gift,
   Loader2,
   MapPin,
+  Minus,
+  Plus,
   Save,
   Scale,
   User,
   Wallet,
 } from 'lucide-react';
 
-import { useCreateMovement, useUpdateMovement } from '@/features/movements/hooks/use-movements';
-import type { Movement } from '@/features/movements/types';
+import { useCreateMovement } from '@/features/movements/hooks/use-movements';
 import { MovementType } from '@/features/movements/types';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useUsers } from '@/features/users/hooks/use-users';
@@ -31,85 +32,114 @@ interface Props {
   defaultType?: MovementType;
   /** When provided, pre-selects seller mode with this seller. */
   defaultSellerId?: string;
-  /** When provided, the modal works in edit mode for this movement. */
-  editMovement?: Movement;
 }
 
 type TargetMode = 'sucursal' | 'seller';
 
-interface FormState {
-  targetMode: TargetMode;
-  salePointId: string;
-  sellerId: string;
+interface TypeOption {
+  id: string;
   type: MovementType;
-  amount: string;
-  description: string;
-  occurredDate: string;
-  isPrizePayment: boolean;
-}
-
-const SUCURSAL_TYPE_OPTIONS: {
-  value: MovementType;
-  label: string;
-  icon: React.ReactNode;
-}[] = [
-  {
-    value: MovementType.EXPENSE,
-    label: 'Gasto',
-    icon: <ArrowDownRight className="size-4 text-rose-600" />,
-  },
-  {
-    value: MovementType.DEPOSIT,
-    label: 'Depósito',
-    icon: <ArrowUpRight className="size-4 text-emerald-600" />,
-  },
-  {
-    value: MovementType.WITHDRAWAL,
-    label: 'Retiro',
-    icon: <Wallet className="size-4 text-rose-600" />,
-  },
-  {
-    value: MovementType.OPENING,
-    label: 'Apertura de caja',
-    icon: <DoorOpen className="size-4 text-slate-600" />,
-  },
-  {
-    value: MovementType.CLOSING,
-    label: 'Cierre de caja',
-    icon: <DoorClosed className="size-4 text-slate-600" />,
-  },
-  {
-    value: MovementType.ADJUSTMENT,
-    label: 'Ajuste',
-    icon: <Scale className="size-4 text-slate-600" />,
-  },
-];
-
-const SELLER_TYPE_OPTIONS: {
-  value: MovementType;
   label: string;
   icon: React.ReactNode;
   hint: string;
-}[] = [
+}
+
+const SUCURSAL_TYPE_OPTIONS: TypeOption[] = [
   {
-    value: MovementType.DEPOSIT,
-    label: 'Cobro',
+    id: 'expense',
+    type: MovementType.EXPENSE,
+    label: 'Gasto',
+    icon: <ArrowDownRight className="size-4 text-rose-600" />,
+    hint: 'Resta del balance',
+  },
+  {
+    id: 'deposit',
+    type: MovementType.DEPOSIT,
+    label: 'Depósito',
     icon: <ArrowUpRight className="size-4 text-emerald-600" />,
-    hint: 'Dinero recibido del vendedor',
+    hint: 'Suma al balance',
   },
   {
-    value: MovementType.WITHDRAWAL,
-    label: 'Crédito',
-    icon: <Wallet className="size-4 text-blue-600" />,
-    hint: 'Devolución o pago al vendedor',
+    id: 'withdrawal',
+    type: MovementType.WITHDRAWAL,
+    label: 'Retiro',
+    icon: <Wallet className="size-4 text-rose-600" />,
+    hint: 'Resta del balance',
   },
   {
-    value: MovementType.ADJUSTMENT,
+    id: 'opening',
+    type: MovementType.OPENING,
+    label: 'Apertura de caja',
+    icon: <DoorOpen className="size-4 text-slate-600" />,
+    hint: '',
+  },
+  {
+    id: 'closing',
+    type: MovementType.CLOSING,
+    label: 'Cierre de caja',
+    icon: <DoorClosed className="size-4 text-slate-600" />,
+    hint: '',
+  },
+  {
+    id: 'adjustment',
+    type: MovementType.ADJUSTMENT,
     label: 'Ajuste',
     icon: <Scale className="size-4 text-slate-600" />,
     hint: 'Corrección manual',
   },
 ];
+
+const SELLER_TYPE_OPTIONS: TypeOption[] = [
+  {
+    id: 'cobro',
+    type: MovementType.DEPOSIT,
+    label: 'Cobro',
+    icon: <ArrowUpRight className="size-4 text-emerald-600" />,
+    hint: 'Dinero recibido del vendedor',
+  },
+  {
+    id: 'credito',
+    type: MovementType.WITHDRAWAL,
+    label: 'Crédito',
+    icon: <Wallet className="size-4 text-blue-600" />,
+    hint: 'Devolución al vendedor',
+  },
+  {
+    id: 'ajuste_mas',
+    type: MovementType.DEPOSIT,
+    label: 'Ajuste +',
+    icon: <Plus className="size-4 text-emerald-600" />,
+    hint: 'Corrección que suma al balance',
+  },
+  {
+    id: 'ajuste_menos',
+    type: MovementType.WITHDRAWAL,
+    label: 'Ajuste −',
+    icon: <Minus className="size-4 text-rose-600" />,
+    hint: 'Corrección que resta del balance',
+  },
+];
+
+function defaultOptionId(mode: TargetMode, defaultType?: MovementType): string {
+  if (mode === 'seller') {
+    if (defaultType === MovementType.WITHDRAWAL) return 'credito';
+    return 'cobro';
+  }
+  // For branch, option id matches the type string value
+  const found = SUCURSAL_TYPE_OPTIONS.find((o) => o.type === defaultType);
+  return found?.id ?? 'expense';
+}
+
+interface FormState {
+  targetMode: TargetMode;
+  salePointId: string;
+  sellerId: string;
+  selectedOptionId: string;
+  amount: string;
+  description: string;
+  occurredDate: string;
+  isPrizePayment: boolean;
+}
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -122,7 +152,7 @@ const EMPTY: FormState = {
   targetMode: 'sucursal',
   salePointId: '',
   sellerId: '',
-  type: MovementType.EXPENSE,
+  selectedOptionId: 'expense',
   amount: '',
   description: '',
   occurredDate: isoDate(new Date()),
@@ -135,9 +165,7 @@ export function CreateMovementModal({
   defaultSalePointId,
   defaultType,
   defaultSellerId,
-  editMovement,
 }: Props) {
-  const isEdit = !!editMovement;
   const [form, setForm] = useState<FormState>(EMPTY);
   const [clientRequestId, setClientRequestId] = useState<string>('');
 
@@ -147,47 +175,25 @@ export function CreateMovementModal({
     limit: 200,
     offset: 0,
   });
-  const createMutation = useCreateMovement();
-  const updateMutation = useUpdateMovement();
-  const isPending = isEdit ? updateMutation.isPending : createMutation.isPending;
-  const error = isEdit ? updateMutation.error : createMutation.error;
+  const { mutateAsync, isPending, error, reset } = useCreateMovement();
 
   useEffect(() => {
     if (open) {
-      if (editMovement) {
-        const mode: TargetMode = editMovement.sellerId ? 'seller' : 'sucursal';
-        const occurredDate = editMovement.occurredAt
-          ? isoDate(new Date(editMovement.occurredAt))
-          : isoDate(new Date());
-        setForm({
-          targetMode: mode,
-          salePointId: editMovement.salePointId ?? '',
-          sellerId: editMovement.sellerId ?? '',
-          type: editMovement.type,
-          amount: String(editMovement.amount),
-          description: editMovement.description ?? '',
-          occurredDate,
-          isPrizePayment: editMovement.isPrizePayment,
-        });
-      } else {
-        const mode: TargetMode = defaultSellerId ? 'seller' : 'sucursal';
-        setForm({
-          ...EMPTY,
-          targetMode: mode,
-          salePointId: defaultSalePointId ?? '',
-          sellerId: defaultSellerId ?? '',
-          type: defaultType ?? (mode === 'seller' ? MovementType.DEPOSIT : MovementType.EXPENSE),
-        });
-      }
-      createMutation.reset();
-      updateMutation.reset();
+      const mode: TargetMode = defaultSellerId ? 'seller' : 'sucursal';
+      setForm({
+        ...EMPTY,
+        targetMode: mode,
+        salePointId: defaultSalePointId ?? '',
+        sellerId: defaultSellerId ?? '',
+        selectedOptionId: defaultOptionId(mode, defaultType),
+      });
+      reset();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, defaultSalePointId, defaultType, defaultSellerId, reset]);
 
   useEffect(() => {
-    if (open && !isEdit) setClientRequestId(crypto.randomUUID());
-  }, [open, isEdit]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (open) setClientRequestId(crypto.randomUUID());
+  }, [open]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -197,10 +203,16 @@ export function CreateMovementModal({
     setForm((prev) => ({
       ...prev,
       targetMode: mode,
-      type: mode === 'seller' ? MovementType.DEPOSIT : MovementType.EXPENSE,
+      selectedOptionId: mode === 'seller' ? 'cobro' : 'expense',
       isPrizePayment: false,
     }));
   };
+
+  const typeOptions =
+    form.targetMode === 'seller' ? SELLER_TYPE_OPTIONS : SUCURSAL_TYPE_OPTIONS;
+
+  const selectedOption =
+    typeOptions.find((o) => o.id === form.selectedOptionId) ?? typeOptions[0];
 
   const parsedAmount = parseInt(form.amount, 10);
   const amountValid =
@@ -215,39 +227,27 @@ export function CreateMovementModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid || isPending) return;
-    if (isEdit && editMovement) {
-      await updateMutation.mutateAsync({
-        id: editMovement.id,
-        type: form.type,
-        amount: parsedAmount,
-        description: form.description.trim() || undefined,
-        occurredAt: `${form.occurredDate}T00:00:00-06:00`,
-        isPrizePayment: form.isPrizePayment,
-      });
-    } else {
-      await createMutation.mutateAsync({
-        salePointId: form.targetMode === 'sucursal' ? form.salePointId : undefined,
-        sellerId: form.targetMode === 'seller' ? form.sellerId : undefined,
-        isPrizePayment: form.isPrizePayment,
-        type: form.type,
-        amount: parsedAmount,
-        description: form.description.trim() || undefined,
-        occurredAt: `${form.occurredDate}T00:00:00-06:00`,
-        clientRequestId,
-      });
-    }
+    await mutateAsync({
+      salePointId: form.targetMode === 'sucursal' ? form.salePointId : undefined,
+      sellerId: form.targetMode === 'seller' ? form.sellerId : undefined,
+      isPrizePayment: form.isPrizePayment,
+      type: selectedOption.type,
+      amount: parsedAmount,
+      description: form.description.trim() || undefined,
+      occurredAt: `${form.occurredDate}T00:00:00-06:00`,
+      clientRequestId,
+    });
     onClose();
   };
 
-  const typeOptions =
-    form.targetMode === 'seller' ? SELLER_TYPE_OPTIONS : SUCURSAL_TYPE_OPTIONS;
+  const isSeller = form.targetMode === 'seller';
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Editar movimiento' : 'Registrar movimiento'}
-      description={isEdit ? 'Solo puedes cambiar el tipo, monto, descripción y fecha.' : 'Los movimientos entran al cálculo según su tipo.'}
+      title="Registrar movimiento"
+      description="Los movimientos entran al cálculo según su tipo."
       size="max-w-xl"
       footer={
         <>
@@ -274,7 +274,7 @@ export function CreateMovementModal({
             ) : (
               <Save className="size-4" strokeWidth={2.4} />
             )}
-            {isEdit ? 'Actualizar' : 'Guardar'}
+            Guardar
           </button>
         </>
       }
@@ -284,79 +284,80 @@ export function CreateMovementModal({
         onSubmit={handleSubmit}
         className="space-y-4"
       >
-        {/* Target mode toggle — oculto en modo edición (no se cambia el destinatario) */}
-        {!isEdit && (
-          <>
-            <div className="flex rounded-lg border border-border bg-secondary/40 p-1 gap-1">
-              <ModeTab
-                label="Sucursal"
-                icon={<MapPin className="size-3.5" />}
-                active={form.targetMode === 'sucursal'}
-                onClick={() => switchMode('sucursal')}
-              />
-              <ModeTab
-                label="Vendedor"
-                icon={<User className="size-3.5" />}
-                active={form.targetMode === 'seller'}
-                onClick={() => switchMode('seller')}
-              />
-            </div>
+        {/* Target mode toggle */}
+        <div className="flex rounded-lg border border-border bg-secondary/40 p-1 gap-1">
+          <ModeTab
+            label="Sucursal"
+            icon={<MapPin className="size-3.5" />}
+            active={form.targetMode === 'sucursal'}
+            onClick={() => switchMode('sucursal')}
+          />
+          <ModeTab
+            label="Vendedor"
+            icon={<User className="size-3.5" />}
+            active={form.targetMode === 'seller'}
+            onClick={() => switchMode('seller')}
+          />
+        </div>
 
-            {form.targetMode === 'sucursal' ? (
-              <Field label="Sucursal" required>
-                <Select
-                  value={form.salePointId}
-                  onChange={(v) => set('salePointId', v)}
-                  leadingIcon={<MapPin className="size-4" />}
-                  placeholder={
-                    loadingSalePoints ? 'Cargando…' : 'Seleccione una sucursal'
-                  }
-                  disabled={loadingSalePoints}
-                  options={
-                    salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ??
-                    []
-                  }
-                />
-              </Field>
-            ) : (
-              <Field label="Vendedor" required>
-                <Select
-                  value={form.sellerId}
-                  onChange={(v) => set('sellerId', v)}
-                  leadingIcon={<User className="size-4" />}
-                  placeholder={
-                    loadingSellers ? 'Cargando…' : 'Seleccione un vendedor'
-                  }
-                  disabled={loadingSellers}
-                  options={
-                    sellersData?.items.map((u) => ({
-                      value: u.id,
-                      label: u.name,
-                    })) ?? []
-                  }
-                />
-              </Field>
-            )}
-          </>
+        {form.targetMode === 'sucursal' ? (
+          <Field label="Sucursal" required>
+            <Select
+              value={form.salePointId}
+              onChange={(v) => set('salePointId', v)}
+              leadingIcon={<MapPin className="size-4" />}
+              placeholder={
+                loadingSalePoints ? 'Cargando…' : 'Seleccione una sucursal'
+              }
+              disabled={loadingSalePoints}
+              options={
+                salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ??
+                []
+              }
+            />
+          </Field>
+        ) : (
+          <Field label="Vendedor" required>
+            <Select
+              value={form.sellerId}
+              onChange={(v) => set('sellerId', v)}
+              leadingIcon={<User className="size-4" />}
+              placeholder={
+                loadingSellers ? 'Cargando…' : 'Seleccione un vendedor'
+              }
+              disabled={loadingSellers}
+              options={
+                sellersData?.items.map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                })) ?? []
+              }
+            />
+          </Field>
         )}
 
         <Field label="Tipo" required>
-          <div className={cn('grid gap-2', form.targetMode === 'seller' ? 'grid-cols-3' : 'grid-cols-3')}>
+          <div
+            className={cn(
+              'grid gap-2',
+              isSeller ? 'grid-cols-2' : 'grid-cols-3',
+            )}
+          >
             {typeOptions.map((opt) => (
               <TypeOption
-                key={opt.value}
-                active={form.type === opt.value}
-                onClick={() => set('type', opt.value)}
+                key={opt.id}
+                active={form.selectedOptionId === opt.id}
+                onClick={() => set('selectedOptionId', opt.id)}
                 icon={opt.icon}
                 label={opt.label}
-                hint={'hint' in opt ? (opt as { hint?: string }).hint : undefined}
+                hint={opt.hint || undefined}
               />
             ))}
           </div>
         </Field>
 
         {/* Prize payment checkbox — seller mode only */}
-        {form.targetMode === 'seller' && (
+        {isSeller && (
           <label className="flex items-center gap-2.5 rounded-lg border border-border bg-secondary/30 px-3 py-2.5 text-sm text-foreground cursor-pointer hover:bg-secondary/50 transition">
             <input
               type="checkbox"
@@ -415,7 +416,7 @@ export function CreateMovementModal({
             onChange={(e) => set('description', e.target.value)}
             maxLength={255}
             placeholder={
-              form.targetMode === 'seller'
+              isSeller
                 ? 'ej. Cobro semana 23, ajuste por diferencia en caja'
                 : 'ej. Pago de luz, remesa desde bodega, ajuste caja'
             }
