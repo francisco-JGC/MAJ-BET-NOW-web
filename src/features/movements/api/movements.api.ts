@@ -19,6 +19,7 @@ export async function listMovements(
   const { data } = await http.get<ListMovementsResponse>('/movements', {
     params: {
       salePointId: params.salePointId || undefined,
+      sellerId: params.sellerId || undefined,
       type: params.type || undefined,
       from: params.from || undefined,
       to: params.to || undefined,

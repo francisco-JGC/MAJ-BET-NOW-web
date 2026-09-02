@@ -13,6 +13,7 @@ import {
   Scale,
   Tag,
   Trash2,
+  User as UserIcon,
   Wallet,
 } from 'lucide-react';
 
@@ -24,6 +25,7 @@ import {
 import { MovementType } from '@/features/movements/types';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useUsers } from '@/features/users/hooks/use-users';
+import { UserRole } from '@/features/users/types';
 import { cn } from '@/shared/lib/cn';
 import { formatCurrency } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
@@ -102,6 +104,7 @@ const TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
 
 export function MovementsPage() {
   const [salePointId, setSalePointId] = useState('');
+  const [sellerId, setSellerId] = useState('');
   const [type, setType] = useState<MovementType | ''>('');
   const [from, setFrom] = useState(isoDate(new Date()));
   const [to, setTo] = useState(isoDate(new Date()));
@@ -111,13 +114,14 @@ export function MovementsPage() {
   const params = useMemo(
     () => ({
       salePointId: salePointId || undefined,
+      sellerId: sellerId || undefined,
       type: (type || undefined) as MovementType | undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
       to: to ? `${to}T23:59:59-06:00` : undefined,
       page: page + 1,
       limit: PAGE_SIZE,
     }),
-    [salePointId, type, from, to, page],
+    [salePointId, sellerId, type, from, to, page],
   );
 
   const { data, isLoading, isFetching, error } = useMovements(params);
@@ -125,6 +129,7 @@ export function MovementsPage() {
   const total = data?.total ?? 0;
 
   const { data: salePoints } = useSalePoints();
+  const { data: sellersPage } = useUsers({ role: UserRole.SELLER, limit: 200, offset: 0 });
   // Users list resolves creator names; role isn't restricted because the
   // creator can be admin OR partner.
   const { data: usersPage } = useUsers({ limit: 100, offset: 0 });
@@ -139,6 +144,11 @@ export function MovementsPage() {
     for (const u of usersPage?.items ?? []) m.set(u.id, u);
     return m;
   }, [usersPage]);
+  const sellerById = useMemo(() => {
+    const m = new Map<string, User>();
+    for (const u of sellersPage?.items ?? []) m.set(u.id, u);
+    return m;
+  }, [sellersPage]);
 
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
@@ -165,12 +175,13 @@ export function MovementsPage() {
       </header>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field label="Sucursal">
             <Select
               value={salePointId}
               onChange={(v) => {
                 setSalePointId(v);
+                if (v) setSellerId('');
                 setPage(0);
               }}
               leadingIcon={<MapPin className="size-4" />}
@@ -180,6 +191,25 @@ export function MovementsPage() {
                 ...(salePoints?.map((sp) => ({
                   value: sp.id,
                   label: sp.name,
+                })) ?? []),
+              ]}
+            />
+          </Field>
+          <Field label="Vendedor">
+            <Select
+              value={sellerId}
+              onChange={(v) => {
+                setSellerId(v);
+                if (v) setSalePointId('');
+                setPage(0);
+              }}
+              leadingIcon={<UserIcon className="size-4" />}
+              placeholder="Todos"
+              options={[
+                { value: '', label: 'Todos los vendedores' },
+                ...(sellersPage?.items.map((u) => ({
+                  value: u.id,
+                  label: u.name,
                 })) ?? []),
               ]}
             />
@@ -278,8 +308,13 @@ export function MovementsPage() {
                     key={m.id}
                     movement={m}
                     salePointName={
-                      (m.salePointId ? salePointById.get(m.salePointId)?.name : undefined) ?? '—'
+                      m.salePointId
+                        ? (salePointById.get(m.salePointId)?.name ?? '—')
+                        : m.sellerId
+                          ? (sellerById.get(m.sellerId)?.name ?? '—')
+                          : '—'
                     }
+                    isSeller={!m.salePointId && !!m.sellerId}
                     createdByName={
                       m.createdById
                         ? userById.get(m.createdById)?.name ?? '—'
@@ -356,12 +391,14 @@ export function MovementsPage() {
 function MovementRow({
   movement,
   salePointName,
+  isSeller,
   createdByName,
   onDelete,
   deleting,
 }: {
   movement: Movement;
   salePointName: string;
+  isSeller: boolean;
   createdByName: string;
   onDelete: () => void;
   deleting: boolean;
@@ -379,7 +416,17 @@ function MovementRow({
       <td className="px-6 py-3.5 text-muted-foreground">
         {formatManaguaDate(movement.occurredAt)}
       </td>
-      <td className="px-6 py-3.5 text-foreground">{salePointName}</td>
+      <td className="px-6 py-3.5 text-foreground">
+        <div className="flex items-center gap-1.5">
+          {isSeller && (
+            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/10 text-blue-700 ring-1 ring-inset ring-blue-500/20">
+              <UserIcon className="size-2.5" />
+              Vendedor
+            </span>
+          )}
+          {salePointName}
+        </div>
+      </td>
       <td className="px-6 py-3.5">
         <span
           className={cn(

@@ -65,6 +65,7 @@ export interface MovementsBalanceResponse {
 
 export interface ListMovementsParams {
   salePointId?: string;
+  sellerId?: string;
   type?: MovementType;
   from?: string;
   to?: string;
