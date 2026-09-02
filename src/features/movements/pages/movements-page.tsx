@@ -232,10 +232,10 @@ export function MovementsPage() {
               placeholder="Todos"
               options={[
                 { value: '', label: 'Todos los tipos' },
-                ...Object.entries(TYPE_META).map(([value, meta]) => ({
-                  value,
-                  label: meta.label,
-                })),
+                { value: MovementType.EXPENSE, label: 'Gasto' },
+                { value: MovementType.DEPOSIT, label: 'Depósito / Cobro' },
+                { value: MovementType.WITHDRAWAL, label: 'Retiro / Crédito' },
+                { value: MovementType.ADJUSTMENT, label: 'Ajuste' },
               ]}
             />
           </Field>
