@@ -7,11 +7,11 @@ import type {
   ListMovementsParams,
   ListMovementsResponse,
   Movement,
-  MovementType,
   MovementsBalanceParams,
   MovementsBalanceResponse,
   SellerMovementsBalanceParams,
   SellerMovementsBalanceResponse,
+  UpdateMovementPayload,
 } from '@/features/movements/types';
 
 export async function listMovements(
@@ -36,14 +36,6 @@ export async function createMovement(
 ): Promise<Movement> {
   const { data } = await http.post<Movement>('/movements', payload);
   return data;
-}
-
-export interface UpdateMovementPayload {
-  type?: MovementType;
-  amount?: number;
-  description?: string;
-  occurredAt?: string;
-  isPrizePayment?: boolean;
 }
 
 export async function updateMovement(

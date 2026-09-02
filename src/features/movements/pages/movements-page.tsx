@@ -9,6 +9,7 @@ import {
   DoorOpen,
   ListChecks,
   MapPin,
+  Pencil,
   Plus,
   Scale,
   Tag,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { CreateMovementModal } from '@/features/movements/components/create-movement-modal';
+import { EditMovementModal } from '@/features/movements/components/edit-movement-modal';
 import {
   useDeleteMovement,
   useMovements,
@@ -124,6 +126,7 @@ export function MovementsPage() {
   const [to, setTo] = useState(isoDate(new Date()));
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editMovement, setEditMovement] = useState<Movement | null>(null);
 
   const params = useMemo(
     () => ({
@@ -327,6 +330,7 @@ export function MovementsPage() {
                         ? userById.get(m.createdById)?.name ?? '—'
                         : '—'
                     }
+                    onEdit={() => setEditMovement(m)}
                     onDelete={() => deleteMovement.mutate(m.id)}
                     deleting={
                       deleteMovement.isPending &&
@@ -391,6 +395,11 @@ export function MovementsPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
+      <EditMovementModal
+        open={editMovement !== null}
+        onClose={() => setEditMovement(null)}
+        movement={editMovement}
+      />
     </div>
   );
 }
@@ -400,6 +409,7 @@ function MovementRow({
   destinationName,
   destinationKind,
   createdByName,
+  onEdit,
   onDelete,
   deleting,
 }: {
@@ -407,6 +417,7 @@ function MovementRow({
   destinationName: string;
   destinationKind: 'branch' | 'seller';
   createdByName: string;
+  onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
 }) {
@@ -455,24 +466,34 @@ function MovementRow({
       </td>
       <td className="px-6 py-3.5 text-muted-foreground">{createdByName}</td>
       <td className="px-6 py-3.5 text-right">
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              window.confirm('¿Eliminar este movimiento? No se puede deshacer.')
-            ) {
-              onDelete();
-            }
-          }}
-          disabled={deleting}
-          className={cn(
-            'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/10',
-            deleting && 'cursor-not-allowed opacity-60',
-          )}
-          aria-label="Eliminar"
-        >
-          <Trash2 className="size-3.5" strokeWidth={2.4} />
-        </button>
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-500/10"
+            aria-label="Editar"
+          >
+            <Pencil className="size-3.5" strokeWidth={2.4} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm('¿Eliminar este movimiento? No se puede deshacer.')
+              ) {
+                onDelete();
+              }
+            }}
+            disabled={deleting}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-500/10',
+              deleting && 'cursor-not-allowed opacity-60',
+            )}
+            aria-label="Eliminar"
+          >
+            <Trash2 className="size-3.5" strokeWidth={2.4} />
+          </button>
+        </div>
       </td>
     </tr>
   );

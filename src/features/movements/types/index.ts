@@ -80,6 +80,12 @@ export interface ListMovementsResponse {
   total: number;
 }
 
+export interface UpdateMovementPayload {
+  type?: MovementType;
+  amount?: number;
+  description?: string;
+}
+
 export interface CreateMovementPayload {
   /** Required for sucursal movements. Omit when sellerId is provided. */
   salePointId?: string;
