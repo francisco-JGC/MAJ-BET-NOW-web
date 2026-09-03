@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import {
   Activity,
   Calendar,
+  Clock,
   Dices,
-  Hash,
   MapPin,
   User as UserIcon,
 } from 'lucide-react';
 
 import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
+import { useMovementsBalance } from '@/features/movements/hooks/use-movements-balance';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-number';
 import { useUsers } from '@/features/users/hooks/use-users';
@@ -22,11 +23,8 @@ import type { DrawSchedule } from '@/features/games/types';
 
 const MANAGUA_OFFSET = '-06:00';
 
-const DRAW_TIME_FMT = new Intl.DateTimeFormat('es-NI', {
+const TIME_FMT = new Intl.DateTimeFormat('es-NI', {
   timeZone: 'America/Managua',
-  weekday: 'short',
-  day: '2-digit',
-  month: 'short',
   hour: 'numeric',
   minute: '2-digit',
   hour12: true,
@@ -40,48 +38,27 @@ function isoDate(d: Date): string {
 }
 
 /**
- * Genera las opciones de sorteo disponibles para un juego, cruzando los
- * schedules activos con el rango de fechas seleccionado. Solo incluye
- * instancias donde el schedule aplica al día de la semana.
+ * Devuelve los horarios únicos del juego (e.g. "11:00", "15:00", "18:00",
+ * "21:00"). No depende del rango de fechas — el filtro de fecha ya acota
+ * el resultado; aquí solo mostramos qué sorteos existen.
  */
 function generateDrawOptions(
-  from: string,
-  to: string,
   schedules: DrawSchedule[],
 ): Array<{ value: string; label: string }> {
-  if (!from || !to || schedules.length === 0) return [];
   const active = schedules.filter((s) => s.isActive);
   if (active.length === 0) return [];
 
-  const options: Array<{ value: string; label: string }> = [];
   const seen = new Set<string>();
+  const options: Array<{ value: string; label: string }> = [];
 
-  const start = new Date(`${from}T12:00:00${MANAGUA_OFFSET}`);
-  const end = new Date(`${to}T12:00:00${MANAGUA_OFFSET}`);
-  const MS_DAY = 86_400_000;
-
-  // Limit to 90 days to avoid huge lists
-  const maxDays = Math.min(
-    Math.round((end.getTime() - start.getTime()) / MS_DAY) + 1,
-    90,
-  );
-
-  for (let i = 0; i < maxDays; i++) {
-    const dayMs = start.getTime() + i * MS_DAY;
-    const dayIso = isoDate(new Date(dayMs));
-    const jsDay = new Date(`${dayIso}T12:00:00${MANAGUA_OFFSET}`).getDay();
-
-    for (const s of active) {
-      const appliesToDay = s.dayOfWeek === null || s.dayOfWeek === jsDay;
-      if (!appliesToDay) continue;
-
-      const value = `${dayIso}T${s.drawTime}:00${MANAGUA_OFFSET}`;
-      if (seen.has(value)) continue;
-      seen.add(value);
-
-      const label = DRAW_TIME_FMT.format(new Date(value));
-      options.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
-    }
+  for (const s of active) {
+    if (seen.has(s.drawTime)) continue;
+    seen.add(s.drawTime);
+    // Format using an arbitrary fixed date just to get the time label
+    const label = TIME_FMT.format(
+      new Date(`2000-01-01T${s.drawTime}:00${MANAGUA_OFFSET}`),
+    );
+    options.push({ value: s.drawTime, label });
   }
 
   return options.sort((a, b) => a.value.localeCompare(b.value));
@@ -90,7 +67,7 @@ function generateDrawOptions(
 export function BranchFlowPage() {
   const [salePointId, setSalePointId] = useState('');
   const [gameId, setGameId] = useState('');
-  const [drawAt, setDrawAt] = useState('');
+  const [drawTime, setDrawTime] = useState('');
   const [sellerId, setSellerId] = useState('');
   const [from, setFrom] = useState(isoDate(new Date()));
   const [to, setTo] = useState(isoDate(new Date()));
@@ -100,13 +77,22 @@ export function BranchFlowPage() {
   const { data: schedules } = useGameSchedules(gameId || null);
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
-    limit: 200,
+    limit: 500,
     offset: 0,
   });
 
   const drawOptions = useMemo(
-    () => generateDrawOptions(from, to, schedules ?? []),
-    [from, to, schedules],
+    () => generateDrawOptions(schedules ?? []),
+    [schedules],
+  );
+
+  // Sellers filtered to the selected salePoint
+  const sellers = useMemo(
+    () =>
+      (sellersPage?.items ?? []).filter(
+        (u) => !salePointId || u.salePointId === salePointId,
+      ),
+    [sellersPage, salePointId],
   );
 
   // Query only when both required fields are set
@@ -119,15 +105,31 @@ export function BranchFlowPage() {
             sellerId: sellerId || undefined,
             from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
             to: to ? endOfDayParam(to) : undefined,
-            drawAt: drawAt || undefined,
+            drawTime: drawTime || undefined,
           }
         : null,
-    [salePointId, gameId, sellerId, from, to, drawAt],
+    [salePointId, gameId, sellerId, from, to, drawTime],
   );
 
   const { data, isLoading, isFetching, error } = useSalesByNumber(
     params ?? {},
   );
+
+  // Balance query for Pérdida (wonPrize). Filters by salePointId + date only
+  // since movements/balance doesn't support gameId.
+  const balanceParams = useMemo(
+    () =>
+      salePointId
+        ? {
+            salePointId,
+            from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
+            to: to ? endOfDayParam(to) : undefined,
+          }
+        : {},
+    [salePointId, from, to],
+  );
+  const { data: balanceData } = useMovementsBalance(balanceParams);
+  const wonPrize = balanceData?.items?.[0]?.wonPrize ?? 0;
 
   // Sort by label ascending (backend returns by total_amount DESC)
   const items = useMemo(() => {
@@ -142,17 +144,15 @@ export function BranchFlowPage() {
 
   function handleGameChange(id: string) {
     setGameId(id);
-    setDrawAt(''); // reset draw when game changes
+    setDrawTime('');
   }
 
   function handleFromChange(val: string) {
     setFrom(val);
-    setDrawAt('');
   }
 
   function handleToChange(val: string) {
     setTo(val);
-    setDrawAt('');
   }
 
   const ready = Boolean(salePointId && gameId);
@@ -226,9 +226,9 @@ export function BranchFlowPage() {
           </Field>
           <Field label="Sorteo">
             <Select
-              value={drawAt}
-              onChange={setDrawAt}
-              leadingIcon={<Hash className="size-4" />}
+              value={drawTime}
+              onChange={setDrawTime}
+              leadingIcon={<Clock className="size-4" />}
               placeholder={gameId ? 'Todos los sorteos' : 'Selecciona un juego primero'}
               options={drawOptions}
               disabled={!gameId}
@@ -239,13 +239,9 @@ export function BranchFlowPage() {
               value={sellerId}
               onChange={setSellerId}
               leadingIcon={<UserIcon className="size-4" />}
-              placeholder="Todos los vendedores"
-              options={
-                sellersPage?.items?.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })) ?? []
-              }
+              placeholder={salePointId ? 'Todos los vendedores' : 'Selecciona una sucursal primero'}
+              options={sellers.map((u) => ({ value: u.id, label: u.name }))}
+              disabled={!salePointId}
             />
           </Field>
         </div>
@@ -268,6 +264,14 @@ export function BranchFlowPage() {
         </div>
       )}
 
+      {/* Badges resumen */}
+      {ready && !error && items.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MiniStat label="Facturado" value={grandTotal} tone="emerald" />
+          <MiniStat label="Pérdida" value={wonPrize} tone="rose" />
+        </div>
+      )}
+
       {/* Tabla */}
       {ready && !error && (
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -280,9 +284,8 @@ export function BranchFlowPage() {
             >
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
-                  <th className="px-6 py-3">N°</th>
-                  <th className="px-6 py-3">Número de Apuesta</th>
-                  <th className="px-6 py-3 text-right">Total Vendido</th>
+                  <th className="px-4 py-3">Número de Apuesta</th>
+                  <th className="px-4 py-3 text-right">Total Vendido</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -293,22 +296,19 @@ export function BranchFlowPage() {
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={3}
-                      className="px-6 py-14 text-center text-sm text-muted-foreground"
+                      colSpan={2}
+                      className="px-4 py-14 text-center text-sm text-muted-foreground"
                     >
                       Sin ventas en el rango seleccionado.
                     </td>
                   </tr>
                 ) : (
-                  items.map((row, idx) => (
+                  items.map((row) => (
                     <tr key={`${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
-                      <td className="px-6 py-3.5 tabular-nums text-muted-foreground">
-                        {idx + 1}
-                      </td>
-                      <td className="px-6 py-3.5 font-semibold tabular-nums">
+                      <td className="px-4 py-3 font-semibold tabular-nums">
                         {row.label}
                       </td>
-                      <td className="px-6 py-3.5 text-right tabular-nums font-bold text-emerald-700">
+                      <td className="px-4 py-3 text-right tabular-nums font-bold text-emerald-700">
                         {formatCurrency(row.totalAmount)}
                       </td>
                     </tr>
@@ -318,13 +318,10 @@ export function BranchFlowPage() {
               {items.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-border bg-slate-50/70">
-                    <td
-                      colSpan={2}
-                      className="px-6 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground"
-                    >
+                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                       Total ({items.length} número{items.length !== 1 ? 's' : ''})
                     </td>
-                    <td className="px-6 py-3 text-right tabular-nums text-base font-black text-emerald-800">
+                    <td className="px-4 py-3 text-right tabular-nums text-base font-black text-emerald-800">
                       {formatCurrency(grandTotal)}
                     </td>
                   </tr>
@@ -343,12 +340,34 @@ export function BranchFlowPage() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <td key={i} className="px-6 py-4">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <td key={i} className="px-4 py-4">
           <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
         </td>
       ))}
     </tr>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'emerald' | 'rose';
+}) {
+  const valueColor = tone === 'emerald' ? 'text-emerald-800' : 'text-rose-800';
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className={cn('mt-1 text-xl font-black tabular-nums', valueColor)}>
+        {formatCurrency(value)}
+      </div>
+    </div>
   );
 }
 

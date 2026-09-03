@@ -17,7 +17,7 @@ export async function getSalesByNumber(
         sellerId: params.sellerId || undefined,
         from: params.from || undefined,
         to: params.to || undefined,
-        drawAt: params.drawAt || undefined,
+        drawTime: params.drawTime || undefined,
       },
     },
   );

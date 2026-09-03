@@ -25,6 +25,6 @@ export interface SalesByNumberParams {
   from?: string;
   /** ISO 8601 con offset — fin del rango, exclusivo (backend usa `<`). */
   to?: string;
-  /** ISO 8601 — timestamp exacto del sorteo para filtrar t.draw_at. */
-  drawAt?: string;
+  /** "HH:MM" en hora Managua — filtra por la hora del sorteo sin importar la fecha. */
+  drawTime?: string;
 }
