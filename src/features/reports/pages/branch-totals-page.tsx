@@ -10,7 +10,7 @@ import {
 import { useGames } from '@/features/games/hooks/use-games';
 import { useBranchTotals } from '@/features/reports/hooks/use-branch-totals';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 import { TableLoadingOverlay } from '@/shared/ui/table-loading-overlay';
 
@@ -32,7 +32,7 @@ export function BranchTotalsPage() {
     () => ({
       gameId: gameId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
     }),
     [gameId, from, to],
   );

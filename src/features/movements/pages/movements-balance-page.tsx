@@ -25,7 +25,7 @@ import { MovementType } from '@/features/movements/types';
 import { useSellerReport } from '@/features/reports/hooks/use-seller-report';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import { shareCardImage } from '@/shared/lib/share-whatsapp';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { Select } from '@/shared/ui/select';
@@ -66,7 +66,7 @@ export function MovementsBalancePage() {
     () => ({
       salePointIds: salePointIds.length > 0 ? salePointIds : undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
     }),
     [salePointIds, from, to],
   );

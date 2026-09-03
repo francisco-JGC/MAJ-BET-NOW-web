@@ -11,7 +11,7 @@ import { useBillingByGame } from '@/features/reports/hooks/use-billing-by-game';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 import { TableLoadingOverlay } from '@/shared/ui/table-loading-overlay';
 
@@ -42,7 +42,7 @@ export function BillingPage() {
       salePointId: salePointId || undefined,
       sellerId: sellerId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
     }),
     [salePointId, sellerId, from, to],
   );

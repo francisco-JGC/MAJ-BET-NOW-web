@@ -16,7 +16,7 @@ import { useUsers } from '@/features/users/hooks/use-users';
 import { WinnerDetailsModal } from '@/features/winners/components/winner-details-modal';
 import { useWinners } from '@/features/winners/hooks/use-winners';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 
 import type { Game } from '@/features/games/types';
@@ -59,7 +59,7 @@ export function WinnersPage() {
       salePointId: salePointId || undefined,
       sellerId: sellerId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
       search: debouncedSearch || undefined,
     }),
     [gameId, salePointId, sellerId, from, to, debouncedSearch],

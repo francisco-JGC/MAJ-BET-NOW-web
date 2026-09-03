@@ -19,7 +19,7 @@ import { TopRankingCard } from '@/features/home/components/top-ranking-card';
 import { useDashboardSummary } from '@/features/home/hooks/use-dashboard-summary';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -49,7 +49,7 @@ export function HomePage() {
       // que el backend interprete correctamente los límites del día
       // sin depender de la TZ del cliente.
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
     }),
     [from, to],
   );

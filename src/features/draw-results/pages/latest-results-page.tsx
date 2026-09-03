@@ -7,6 +7,7 @@ import { useGames } from '@/features/games/hooks/use-games';
 import { useSession } from '@/features/auth/hooks/use-session';
 import { UserRole } from '@/features/users/types';
 import { cn } from '@/shared/lib/cn';
+import { endOfDayParam } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 
 import type { DrawResult } from '@/features/draw-results/types';
@@ -51,7 +52,7 @@ export function LatestResultsPage() {
     () => ({
       gameId: gameId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
       limit: DEFAULT_LIMIT,
       offset: 0,
     }),

@@ -18,6 +18,7 @@ import {
 } from '@/features/draw-results/hooks/use-draw-results';
 import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
 import { cn } from '@/shared/lib/cn';
+import { endOfDayParam } from '@/shared/lib/format';
 import { Modal } from '@/shared/ui/modal';
 import { Select } from '@/shared/ui/select';
 
@@ -78,7 +79,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
       gameId: gameId || undefined,
       // Wall-clock day boundaries in Managua (UTC-6, no DST).
       from: date ? `${date}T00:00:00-06:00` : undefined,
-      to: date ? `${date}T23:59:59-06:00` : undefined,
+      to: date ? endOfDayParam(date) : undefined,
     },
     { enabled: shouldFetchExisting },
   );

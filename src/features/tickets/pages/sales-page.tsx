@@ -17,7 +17,7 @@ import { TicketDetailsModal } from '@/features/tickets/components/ticket-details
 import { useTickets } from '@/features/tickets/hooks/use-tickets';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
-import { formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import {
   SegmentedControl,
   type SegmentTab,
@@ -109,7 +109,7 @@ export function SalesPage() {
       salePointId: salePointId || undefined,
       sellerId: sellerId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? `${to}T23:59:59-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
       search: debouncedSearch || undefined,
     }),
     [
