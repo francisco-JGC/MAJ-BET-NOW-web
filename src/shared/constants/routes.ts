@@ -8,12 +8,12 @@ export const APP_ROUTES = {
 
   // Admin panel routes (sidebar order matches this file).
   home: '/inicio',
-  sales: '/ventas',
+  sales: '/facturas',
   branchTotals: '/totales-sucursal',
   sellerReport: '/reporte-vendedor',
-  branchFlowReport: '/reporte-flujo-sucursal',
+  branchFlowReport: '/sumatoria',
   billing: '/facturacion',
-  salesByNumber: '/ventas-por-numero',
+  salesByNumber: '/montos-maximos',
   winners: '/ganadores',
   movements: '/movimientos',
   movementsCalc: '/calculo-movimientos',

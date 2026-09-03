@@ -137,6 +137,10 @@ export interface BranchFlowParams {
   salePointId: string;
   from?: string;
   to?: string;
+  gameId?: string;
+  sellerId?: string;
+  /** ISO 8601 — exact draw_at timestamp to filter tickets. */
+  drawAt?: string;
 }
 
 export interface BranchFlowResponse {

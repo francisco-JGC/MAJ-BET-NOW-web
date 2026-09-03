@@ -216,7 +216,7 @@ export function SalesPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Receipt className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-black tracking-tight">Ventas</h1>
+          <h1 className="text-2xl font-black tracking-tight">Facturas</h1>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
           <span>

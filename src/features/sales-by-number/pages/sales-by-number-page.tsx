@@ -93,7 +93,7 @@ export function SalesByNumberPage() {
         <div className="flex items-center gap-2">
           <Hash className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-black tracking-tight">
-            Ventas por Número
+            Montos Máximos
           </h1>
         </div>
         <p className="max-w-md text-xs text-muted-foreground">

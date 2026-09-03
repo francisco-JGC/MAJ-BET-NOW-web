@@ -60,6 +60,9 @@ export async function getBranchFlow(
         salePointId: params.salePointId,
         from: params.from || undefined,
         to: params.to || undefined,
+        gameId: params.gameId || undefined,
+        sellerId: params.sellerId || undefined,
+        drawAt: params.drawAt || undefined,
       },
     },
   );
