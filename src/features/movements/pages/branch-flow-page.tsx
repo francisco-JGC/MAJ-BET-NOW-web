@@ -95,13 +95,13 @@ export function BranchFlowPage() {
     [sellersPage, salePointId],
   );
 
-  // Query only when both required fields are set
+  // Query only when sucursal is selected; juego es opcional
   const params = useMemo(
     () =>
-      salePointId && gameId
+      salePointId
         ? {
             salePointId,
-            gameId,
+            gameId: gameId || undefined,
             sellerId: sellerId || undefined,
             from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
             to: to ? endOfDayParam(to) : undefined,
@@ -155,7 +155,7 @@ export function BranchFlowPage() {
     setTo(val);
   }
 
-  const ready = Boolean(salePointId && gameId);
+  const ready = Boolean(salePointId);
 
   return (
     <div className="space-y-6">
@@ -213,12 +213,12 @@ export function BranchFlowPage() {
 
         {/* Fila 2: Juego, Sorteo, Vendedor */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Juego" required>
+          <Field label="Juego">
             <Select
               value={gameId}
               onChange={handleGameChange}
               leadingIcon={<Dices className="size-4" />}
-              placeholder="Selecciona un juego"
+              placeholder="Todos los juegos"
               options={
                 games?.map((g) => ({ value: g.id, label: g.name })) ?? []
               }
@@ -252,7 +252,7 @@ export function BranchFlowPage() {
         <div className="rounded-2xl border border-dashed border-border bg-card p-14 text-center">
           <Dices className="mx-auto size-8 text-muted-foreground/40" />
           <p className="mt-3 text-sm text-muted-foreground">
-            Selecciona una sucursal y un juego para ver la sumatoria.
+            Selecciona una sucursal para ver la sumatoria.
           </p>
         </div>
       )}
