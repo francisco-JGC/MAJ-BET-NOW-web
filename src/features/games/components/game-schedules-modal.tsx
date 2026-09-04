@@ -178,7 +178,7 @@ export function GameSchedulesModal({ game, onClose }: Props) {
                 <tr>
                   <th className="px-4 py-2.5">Día</th>
                   <th className="px-4 py-2.5">Hora</th>
-                  <th className="px-4 py-2.5 text-right">Cutoff</th>
+                  <th className="px-4 py-2.5 text-right">Cierra antes</th>
                   <th className="px-4 py-2.5">Estado</th>
                   <th className="px-4 py-2.5 text-right">Acciones</th>
                 </tr>
@@ -292,7 +292,7 @@ function ReadRow({
         {formatWallClock(schedule.drawTime)}
       </td>
       <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
-        {schedule.cutoffMinutes} min
+        {schedule.cutoffMinutes} min antes
       </td>
       <td className="px-4 py-2.5">
         <span

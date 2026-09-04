@@ -1,7 +1,10 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   Calculator,
+  ChevronDown,
+  Dices,
   Hash,
   History,
   Home,
@@ -9,6 +12,7 @@ import {
   Receipt,
   Repeat,
   Settings2,
+  Shield,
   Trophy,
   User,
 } from 'lucide-react';
@@ -24,18 +28,25 @@ interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
-  /**
-   * Which roles can see this item. Omit to show to every web-eligible role
-   * (admin + partner). Sellers never reach the sidebar — they use mobile.
-   */
   roles?: readonly UserRole[];
 }
 
-// Config-only items (games, resultados globales) stay admin-only. Partners
-// see the operational stuff they need to run their sucursales.
+interface NavGroup {
+  label: string;
+  icon: LucideIcon;
+  roles?: readonly UserRole[];
+  children: NavItem[];
+}
+
+type NavEntry = NavItem | NavGroup;
+
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return 'children' in entry;
+}
+
 const ADMIN_ONLY: readonly UserRole[] = [UserRole.ADMIN];
 
-const NAV_ITEMS: readonly NavItem[] = [
+const NAV_ENTRIES: readonly NavEntry[] = [
   { to: APP_ROUTES.home, label: 'Inicio', icon: Home },
   { to: APP_ROUTES.sales, label: 'Facturas', icon: Receipt },
   { to: APP_ROUTES.users, label: 'Usuarios', icon: User },
@@ -43,17 +54,17 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: APP_ROUTES.movements, label: 'Movimientos', icon: Repeat },
   { to: APP_ROUTES.salesByNumber, label: 'Montos Máximos', icon: Hash, roles: ADMIN_ONLY },
   { to: APP_ROUTES.branchFlowReport, label: 'Sumatoria', icon: BarChart3, roles: ADMIN_ONLY },
-  {
-    to: APP_ROUTES.movementsCalc,
-    label: 'Cálculo Movimientos',
-    icon: Calculator,
-  },
+  { to: APP_ROUTES.movementsCalc, label: 'Cálculo Movimientos', icon: Calculator },
   { to: APP_ROUTES.sucursales, label: 'Sucursales', icon: MapPin },
   {
-    to: APP_ROUTES.systemConfig,
-    label: 'Configuración del sistema',
+    label: 'Configuración',
     icon: Settings2,
     roles: ADMIN_ONLY,
+    children: [
+      { to: APP_ROUTES.draws, label: 'Sorteos', icon: Dices },
+      { to: APP_ROUTES.saleLimits, label: 'Límites de venta', icon: Shield },
+      { to: APP_ROUTES.systemConfig, label: 'Sistema', icon: Settings2 },
+    ],
   },
   { to: APP_ROUTES.latestResults, label: 'Últimos Resultados', icon: History },
 ] as const;
@@ -61,15 +72,21 @@ const NAV_ITEMS: readonly NavItem[] = [
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const session = useSession();
   const role = session?.user.role;
-  const visible = NAV_ITEMS.filter((item) => {
-    if (!item.roles) return true;
-    return role !== undefined && item.roles.includes(role);
+
+  const visible = NAV_ENTRIES.filter((entry) => {
+    if (!entry.roles) return true;
+    return role !== undefined && entry.roles.includes(role);
   });
+
   return (
     <nav className="flex flex-col gap-1 p-3">
-      {visible.map((item) => (
-        <SidebarNavItem key={item.to} item={item} onNavigate={onNavigate} />
-      ))}
+      {visible.map((entry) =>
+        isGroup(entry) ? (
+          <SidebarNavGroup key={entry.label} group={entry} onNavigate={onNavigate} />
+        ) : (
+          <SidebarNavItem key={entry.to} item={entry} onNavigate={onNavigate} />
+        ),
+      )}
     </nav>
   );
 }
@@ -77,9 +94,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 function SidebarNavItem({
   item,
   onNavigate,
+  compact,
 }: {
   item: NavItem;
   onNavigate?: () => void;
+  compact?: boolean;
 }) {
   const Icon = item.icon;
   return (
@@ -90,9 +109,14 @@ function SidebarNavItem({
       className={({ isActive }) =>
         cn(
           'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all',
+          compact && 'px-3 py-2',
           isActive
-            ? 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
-            : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
+            ? compact
+              ? 'bg-primary/10 font-semibold text-primary'
+              : 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
+            : compact
+              ? 'text-foreground/70 hover:bg-primary/5 hover:text-foreground'
+              : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
         )
       }
     >
@@ -101,19 +125,83 @@ function SidebarNavItem({
           <Icon
             className={cn(
               'size-5 shrink-0 transition-colors',
-              isActive
-                ? 'text-primary-foreground'
-                : 'text-primary-foreground/60 group-hover:text-primary-foreground',
+              compact
+                ? isActive
+                  ? 'text-primary'
+                  : 'text-foreground/50 group-hover:text-foreground'
+                : isActive
+                  ? 'text-primary-foreground'
+                  : 'text-primary-foreground/60 group-hover:text-primary-foreground',
             )}
             strokeWidth={isActive ? 2.4 : 2}
           />
-          <span
-            className={cn('truncate font-medium', isActive && 'font-semibold')}
-          >
+          <span className={cn('truncate font-medium', isActive && 'font-semibold')}>
             {item.label}
           </span>
         </>
       )}
     </NavLink>
+  );
+}
+
+function SidebarNavGroup({
+  group,
+  onNavigate,
+}: {
+  group: NavGroup;
+  onNavigate?: () => void;
+}) {
+  const location = useLocation();
+  const anyChildActive = group.children.some((c) => location.pathname === c.to);
+  const [open, setOpen] = useState(anyChildActive);
+  const Icon = group.icon;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all',
+          anyChildActive || open
+            ? 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
+            : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
+        )}
+      >
+        <Icon
+          className={cn(
+            'size-5 shrink-0 transition-colors',
+            anyChildActive || open
+              ? 'text-primary-foreground'
+              : 'text-primary-foreground/60 group-hover:text-primary-foreground',
+          )}
+          strokeWidth={anyChildActive ? 2.4 : 2}
+        />
+        <span className={cn('truncate font-medium flex-1 text-left', anyChildActive && 'font-semibold')}>
+          {group.label}
+        </span>
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 transition-transform duration-200',
+            open && 'rotate-180',
+            anyChildActive || open ? 'text-primary-foreground/80' : 'text-primary-foreground/40',
+          )}
+          strokeWidth={2}
+        />
+      </button>
+
+      {open && (
+        <div className="mx-2 mt-1 overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-black/5">
+          {group.children.map((child) => (
+            <SidebarNavItem
+              key={child.to}
+              item={child}
+              onNavigate={onNavigate}
+              compact
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
