@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   BarChart3,
@@ -154,10 +154,28 @@ function SidebarNavGroup({
   const location = useLocation();
   const anyChildActive = group.children.some((c) => location.pathname === c.to);
   const [open, setOpen] = useState(anyChildActive);
+  const ref = useRef<HTMLDivElement>(null);
   const Icon = group.icon;
 
+  // Close when clicking outside the group (within the sidebar)
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleChildNavigate = () => {
+    setOpen(false);
+    onNavigate?.();
+  };
+
   return (
-    <div>
+    <div ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -196,7 +214,7 @@ function SidebarNavGroup({
             <SidebarNavItem
               key={child.to}
               item={child}
-              onNavigate={onNavigate}
+              onNavigate={handleChildNavigate}
               compact
             />
           ))}
