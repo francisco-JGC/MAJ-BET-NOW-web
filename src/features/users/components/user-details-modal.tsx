@@ -453,6 +453,7 @@ function EditForm({
             onChange={(e) => onChange('password', e.target.value)}
             placeholder="••••••••"
             maxLength={72}
+            autoComplete="new-password"
             className={cn(inputClass, 'pr-20 font-mono')}
           />
           <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center">
