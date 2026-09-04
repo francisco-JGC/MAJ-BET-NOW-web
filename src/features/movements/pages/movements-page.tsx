@@ -96,23 +96,39 @@ const TYPE_META: Record<
 
 /** Override labels for seller-level movements (sellerId != null). */
 const SELLER_TYPE_META: Partial<Record<MovementType, { label: string; classes: string; icon: React.ReactNode }>> = {
+  // Cobro: admin cobra al vendedor → resta de su saldo → rojo
   [MovementType.DEPOSIT]: {
     label: 'Cobro',
+    classes: 'bg-rose-500/10 text-rose-700 ring-rose-500/20',
+    icon: <ArrowDownRight className="size-3" strokeWidth={2.6} />,
+  },
+  // Crédito: admin da crédito al vendedor → suma a su saldo → verde
+  [MovementType.WITHDRAWAL]: {
+    label: 'Crédito',
     classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
     icon: <ArrowUpRight className="size-3" strokeWidth={2.6} />,
   },
-  [MovementType.WITHDRAWAL]: {
-    label: 'Crédito',
-    classes: 'bg-blue-500/10 text-blue-700 ring-blue-500/20',
-    icon: <Wallet className="size-3" strokeWidth={2.6} />,
-  },
 };
 
-/** Sign shown next to the amount so the reader knows if it adds or subtracts. */
+/** Sign for branch-level movements. */
 const TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
   [MovementType.EXPENSE]: '-',
   [MovementType.DEPOSIT]: '+',
   [MovementType.WITHDRAWAL]: '-',
+  [MovementType.OPENING]: '',
+  [MovementType.CLOSING]: '',
+  [MovementType.ADJUSTMENT]: '',
+};
+
+/**
+ * Sign for seller-level movements. Inverted vs branch:
+ * - Cobro (DEPOSIT): admin cobra al vendedor → resta de su saldo → '-'
+ * - Crédito (WITHDRAWAL): admin da crédito al vendedor → suma a su saldo → '+'
+ */
+const SELLER_TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
+  [MovementType.EXPENSE]: '-',
+  [MovementType.DEPOSIT]: '-',
+  [MovementType.WITHDRAWAL]: '+',
   [MovementType.OPENING]: '',
   [MovementType.CLOSING]: '',
   [MovementType.ADJUSTMENT]: '',
@@ -426,7 +442,9 @@ function MovementRow({
     isSeller
       ? (SELLER_TYPE_META[movement.type] ?? TYPE_META[movement.type])
       : TYPE_META[movement.type];
-  const sign = TYPE_SIGN[movement.type];
+  const sign = isSeller
+    ? SELLER_TYPE_SIGN[movement.type]
+    : TYPE_SIGN[movement.type];
   const amountColor =
     sign === '+'
       ? 'text-emerald-700'

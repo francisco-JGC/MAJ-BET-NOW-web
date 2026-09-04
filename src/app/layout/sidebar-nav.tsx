@@ -91,8 +91,8 @@ function SidebarNavItem({
         cn(
           'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all',
           isActive
-            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
-            : 'text-foreground/75 hover:bg-secondary hover:text-foreground',
+            ? 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
+            : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
         )
       }
     >
@@ -103,7 +103,7 @@ function SidebarNavItem({
               'size-5 shrink-0 transition-colors',
               isActive
                 ? 'text-primary-foreground'
-                : 'text-foreground/60 group-hover:text-foreground',
+                : 'text-primary-foreground/60 group-hover:text-primary-foreground',
             )}
             strokeWidth={isActive ? 2.4 : 2}
           />

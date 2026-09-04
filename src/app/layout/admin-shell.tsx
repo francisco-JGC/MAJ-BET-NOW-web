@@ -52,7 +52,7 @@ export function AdminShell() {
       {/* Sidebar drawer (same behavior at every breakpoint) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border bg-card transition-transform duration-200',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-primary transition-transform duration-200',
           isOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -224,7 +224,7 @@ function UserMenu({
 
 function SidebarHeader({ onClose }: { onClose: () => void }) {
   return (
-    <div className="flex h-16 items-center gap-3 border-b border-border px-5">
+    <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
       <img
         src="/logo.png"
         alt="MajbetNow"
@@ -232,17 +232,17 @@ function SidebarHeader({ onClose }: { onClose: () => void }) {
       />
 
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-black leading-tight tracking-tight">
+        <div className="text-sm font-black leading-tight tracking-tight text-primary-foreground">
           MajbetNow
         </div>
-        <div className="text-xs text-muted-foreground leading-tight">
+        <div className="text-xs leading-tight text-primary-foreground/60">
           Panel de administración
         </div>
       </div>
       <button
         type="button"
         onClick={onClose}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+        className="flex size-8 items-center justify-center rounded-md text-primary-foreground/60 hover:bg-white/10 hover:text-primary-foreground"
         aria-label="Cerrar menú"
         title="Cerrar menú"
       >
@@ -262,21 +262,21 @@ function SidebarFooter({
   onLogout: () => void;
 }) {
   return (
-    <div className="border-t border-border p-3">
+    <div className="border-t border-white/10 p-3">
       <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-bold text-foreground">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-primary-foreground">
           {name.slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{name}</div>
-          <div className="truncate text-xs uppercase tracking-wide text-muted-foreground">
+          <div className="truncate text-sm font-semibold text-primary-foreground">{name}</div>
+          <div className="truncate text-xs uppercase tracking-wide text-primary-foreground/60">
             {role}
           </div>
         </div>
         <button
           type="button"
           onClick={onLogout}
-          className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="flex size-8 items-center justify-center rounded-md text-primary-foreground/60 hover:bg-white/10 hover:text-primary-foreground"
           aria-label="Cerrar sesión"
           title="Cerrar sesión"
         >
