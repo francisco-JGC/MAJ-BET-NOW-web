@@ -593,7 +593,8 @@ function MovementsSection({ sellerId, from, to }: { sellerId: string; from?: str
 
 function MovementItem({ movement }: { movement: Movement }) {
   const label = MOVEMENT_LABEL[movement.type] ?? movement.type;
-  const isPositive = movement.type === MovementType.DEPOSIT;
+  // Desde la perspectiva del vendedor: Cobro (DEPOSIT) resta, Crédito (WITHDRAWAL) suma.
+  const isPositive = movement.type === MovementType.WITHDRAWAL;
   const amountClass = isPositive ? 'text-emerald-700' : 'text-rose-700';
   const sign = isPositive ? '+' : '−';
   return (
@@ -605,6 +606,7 @@ function MovementItem({ movement }: { movement: Movement }) {
             ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/20'
             : 'bg-rose-50 text-rose-700 ring-rose-500/20',
         )}
+        title={isPositive ? 'Suma al vendedor' : 'Resta al vendedor'}
       >
         {label}
       </span>
