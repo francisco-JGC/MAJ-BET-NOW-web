@@ -168,22 +168,10 @@ export function GamePrizeRow({
         : <Check className="size-4 text-emerald-600" strokeWidth={2.8} />
       : null;
 
-  const columnCount = 1 + 1 + (showEasy ? 1 : 0) + (showPair ? 1 : 0);
-  const gridTemplate =
-    columnCount === 4
-      ? 'grid-cols-[1fr_auto_auto_auto]'
-      : columnCount === 3
-        ? 'grid-cols-[1fr_auto_auto]'
-        : 'grid-cols-[1fr_auto]';
-
   return (
-    <li
-      className={cn(
-        'grid items-center gap-3 px-4 py-2.5 hover:bg-slate-50/40',
-        gridTemplate,
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-3">
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 hover:bg-slate-50/40">
+      {/* basis-full → ocupa toda la fila en mobile; sm:basis-auto → comparte fila con inputs */}
+      <div className="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-auto">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-500 text-white">
           <Dices className="size-3.5" strokeWidth={2.4} />
         </span>
@@ -253,16 +241,7 @@ export function GamePrizeRow({
       )}
 
       {anyDirty && status === 'idle' && (
-        <span
-          className={cn(
-            '-mt-1.5 pl-11 text-[10px] text-purple-700',
-            columnCount === 4
-              ? 'col-span-4'
-              : columnCount === 3
-                ? 'col-span-3'
-                : 'col-span-2',
-          )}
-        >
+        <span className="w-full pl-11 text-[10px] text-purple-700">
           Sin guardar
         </span>
       )}
