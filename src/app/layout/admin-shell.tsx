@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, LogOut, Menu, Smartphone, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Smartphone, X } from 'lucide-react';
 
 import { SidebarNav } from '@/app/layout/sidebar-nav';
 import { useSidebarStore } from '@/app/layout/sidebar-store';
@@ -15,51 +15,69 @@ export function AdminShell() {
   const logout = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
-  const isOpen = useSidebarStore((s) => s.isOpen);
-  const openSidebar = useSidebarStore((s) => s.open);
-  const closeSidebar = useSidebarStore((s) => s.close);
 
-  // Close the drawer whenever the route changes so tapping a nav item both
-  // navigates and hides the overlay.
+  const isOpen = useSidebarStore((s) => s.isOpen);
+  const pinned = useSidebarStore((s) => s.pinned);
+  const open = useSidebarStore((s) => s.open);
+  const close = useSidebarStore((s) => s.close);
+  const togglePinned = useSidebarStore((s) => s.togglePinned);
+
+  // Close the mobile drawer on navigation (desktop pinned state unaffected).
   useEffect(() => {
-    closeSidebar();
-  }, [location.pathname, closeSidebar]);
+    close();
+  }, [location.pathname, close]);
 
   const handleLogout = () => {
     logout();
     navigate(APP_ROUTES.login, { replace: true });
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Topbar
-        onOpenSidebar={openSidebar}
-        name={session?.user.name ?? '—'}
-        role={session?.user.role ?? ''}
-        onLogout={handleLogout}
-      />
+  // Hamburger: on desktop toggles pinned (persisted); on mobile opens drawer.
+  const handleHamburger = () => {
+    if (window.innerWidth >= 768) {
+      togglePinned();
+    } else {
+      open();
+    }
+  };
 
-      {/* Backdrop */}
+  // Sidebar close button: on desktop collapses (unpins); on mobile closes drawer.
+  const handleSidebarClose = () => {
+    if (window.innerWidth >= 768) {
+      togglePinned();
+    } else {
+      close();
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* Backdrop — mobile only */}
       {isOpen && (
         <button
           type="button"
           aria-label="Cerrar menú"
-          onClick={closeSidebar}
-          className="fixed inset-0 z-30 bg-black/50"
+          onClick={close}
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
         />
       )}
 
-      {/* Sidebar drawer (same behavior at every breakpoint) */}
+      {/* Sidebar
+          Mobile  : slide in/out via isOpen
+          Desktop : always visible when pinned, hidden when not (md: overrides mobile class) */}
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-primary transition-transform duration-200',
           isOpen ? 'translate-x-0' : '-translate-x-full',
+          pinned ? 'md:translate-x-0' : 'md:-translate-x-full',
         )}
       >
-        <SidebarHeader onClose={closeSidebar} />
+        <SidebarHeader onClose={handleSidebarClose} pinned={pinned} />
 
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav onNavigate={closeSidebar} />
+          {/* onNavigate closes the mobile drawer; on desktop (pinned) calling close()
+              sets isOpen=false but the md:translate-x-0 keeps the sidebar visible. */}
+          <SidebarNav onNavigate={close} />
         </div>
 
         <SidebarFooter
@@ -69,20 +87,37 @@ export function AdminShell() {
         />
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-x-hidden px-8 py-6">
-        <Outlet />
-      </main>
+      {/* Content area shifts right on desktop when sidebar is pinned */}
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col transition-[padding-left] duration-200',
+          pinned && 'md:pl-72',
+        )}
+      >
+        <Topbar
+          onOpenSidebar={handleHamburger}
+          pinned={pinned}
+          name={session?.user.name ?? '—'}
+          role={session?.user.role ?? ''}
+          onLogout={handleLogout}
+        />
+        <main className="min-w-0 flex-1 overflow-x-hidden px-8 py-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
 
 function Topbar({
   onOpenSidebar,
+  pinned,
   name,
   role,
   onLogout,
 }: {
   onOpenSidebar: () => void;
+  pinned: boolean;
   name: string;
   role: string;
   onLogout: () => void;
@@ -94,9 +129,15 @@ function Topbar({
           type="button"
           onClick={onOpenSidebar}
           className="flex size-9 items-center justify-center rounded-md text-foreground hover:bg-secondary"
-          aria-label="Abrir menú"
+          aria-label={pinned ? 'Colapsar menú' : 'Abrir menú'}
+          title={pinned ? 'Colapsar menú' : 'Abrir menú'}
         >
-          <Menu className="size-5" />
+          {/* On desktop show panel icon reflecting pinned state; on mobile always hamburger */}
+          <Menu className="size-5 md:hidden" />
+          {pinned
+            ? <PanelLeftClose className="hidden size-5 md:block" />
+            : <PanelLeftOpen className="hidden size-5 md:block" />
+          }
         </button>
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="MajbetNow" className="size-9 object-contain" />
@@ -222,7 +263,13 @@ function UserMenu({
   );
 }
 
-function SidebarHeader({ onClose }: { onClose: () => void }) {
+function SidebarHeader({
+  onClose,
+  pinned,
+}: {
+  onClose: () => void;
+  pinned: boolean;
+}) {
   return (
     <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
       <img
@@ -239,14 +286,17 @@ function SidebarHeader({ onClose }: { onClose: () => void }) {
           Panel de administración
         </div>
       </div>
+
       <button
         type="button"
         onClick={onClose}
         className="flex size-8 items-center justify-center rounded-md text-primary-foreground/60 hover:bg-white/10 hover:text-primary-foreground"
-        aria-label="Cerrar menú"
-        title="Cerrar menú"
+        aria-label={pinned ? 'Colapsar menú' : 'Cerrar menú'}
+        title={pinned ? 'Colapsar menú' : 'Cerrar menú'}
       >
-        <X className="size-4" />
+        {/* Mobile: always X; Desktop: PanelLeftClose when pinned */}
+        <X className="size-4 md:hidden" />
+        <PanelLeftClose className="hidden size-4 md:block" />
       </button>
     </div>
   );

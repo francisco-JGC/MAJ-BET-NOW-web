@@ -1,23 +1,28 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface SidebarState {
-  isOpen: boolean;
+  isOpen: boolean;   // mobile drawer
+  pinned: boolean;   // desktop: sidebar always visible
   open: () => void;
   close: () => void;
   toggle: () => void;
+  togglePinned: () => void;
 }
 
-/**
- * UI state for the sidebar drawer. The sidebar behaves the same at every
- * screen size: hidden off-canvas by default, appears as an overlay with a
- * backdrop when opened via the hamburger.
- *
- * Not persisted — the drawer always starts closed on load so the user lands
- * on content, not on the menu.
- */
-export const useSidebarStore = create<SidebarState>((set) => ({
-  isOpen: false,
-  open: () => set({ isOpen: true }),
-  close: () => set({ isOpen: false }),
-  toggle: () => set((s) => ({ isOpen: !s.isOpen })),
-}));
+export const useSidebarStore = create<SidebarState>()(
+  persist(
+    (set) => ({
+      isOpen: false,
+      pinned: true,
+      open: () => set({ isOpen: true }),
+      close: () => set({ isOpen: false }),
+      toggle: () => set((s) => ({ isOpen: !s.isOpen })),
+      togglePinned: () => set((s) => ({ pinned: !s.pinned })),
+    }),
+    {
+      name: 'majbet-sidebar',
+      partialize: (s) => ({ pinned: s.pinned }),
+    },
+  ),
+);
