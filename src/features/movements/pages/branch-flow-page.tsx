@@ -250,7 +250,7 @@ export function BranchFlowPage() {
       {/* Badge resumen */}
       {ready && !error && items.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-1 max-w-xs">
-          <MiniStat label="Facturado" value={grandTotal} tone="emerald" />
+          <MiniStat label="Total General" value={grandTotal} tone="emerald" />
         </div>
       )}
 
