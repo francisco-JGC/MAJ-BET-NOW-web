@@ -41,8 +41,8 @@ const NAV_ITEMS: readonly NavItem[] = [
   { to: APP_ROUTES.users, label: 'Usuarios', icon: User },
   { to: APP_ROUTES.winners, label: 'Ganadores', icon: Trophy },
   { to: APP_ROUTES.movements, label: 'Movimientos', icon: Repeat },
-  { to: APP_ROUTES.salesByNumber, label: 'Montos Máximos', icon: Hash },
-  { to: APP_ROUTES.branchFlowReport, label: 'Sumatoria', icon: BarChart3 },
+  { to: APP_ROUTES.salesByNumber, label: 'Montos Máximos', icon: Hash, roles: ADMIN_ONLY },
+  { to: APP_ROUTES.branchFlowReport, label: 'Sumatoria', icon: BarChart3, roles: ADMIN_ONLY },
   {
     to: APP_ROUTES.movementsCalc,
     label: 'Cálculo Movimientos',

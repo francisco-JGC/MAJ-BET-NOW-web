@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 
 import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
-import { useMovementsBalance } from '@/features/movements/hooks/use-movements-balance';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-number';
 import { useUsers } from '@/features/users/hooks/use-users';
@@ -114,22 +113,6 @@ export function BranchFlowPage() {
   const { data, isLoading, isFetching, error } = useSalesByNumber(
     params ?? {},
   );
-
-  // Balance query for Pérdida (wonPrize). Filters by salePointId + date only
-  // since movements/balance doesn't support gameId.
-  const balanceParams = useMemo(
-    () =>
-      salePointId
-        ? {
-            salePointId,
-            from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
-            to: to ? endOfDayParam(to) : undefined,
-          }
-        : {},
-    [salePointId, from, to],
-  );
-  const { data: balanceData } = useMovementsBalance(balanceParams);
-  const wonPrize = balanceData?.items?.[0]?.wonPrize ?? 0;
 
   // Sort by label ascending (backend returns by total_amount DESC)
   const items = useMemo(() => {
@@ -264,11 +247,10 @@ export function BranchFlowPage() {
         </div>
       )}
 
-      {/* Badges resumen */}
+      {/* Badge resumen */}
       {ready && !error && items.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-1 max-w-xs">
           <MiniStat label="Facturado" value={grandTotal} tone="emerald" />
-          <MiniStat label="Pérdida" value={wonPrize} tone="rose" />
         </div>
       )}
 
