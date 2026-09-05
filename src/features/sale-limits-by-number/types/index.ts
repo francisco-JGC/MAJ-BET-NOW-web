@@ -4,6 +4,7 @@ export interface SaleLimitByNumber {
   gameId: string;
   label: string;
   amount: number;
+  minAmount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -13,4 +14,5 @@ export interface UpsertSaleLimitByNumberPayload {
   gameId: string;
   label: string;
   amount: number;
+  minAmount?: number | null;
 }
