@@ -479,7 +479,7 @@ function NumberRow({
       <td className="px-6 py-2.5">
         <span
           className={cn(
-            'font-mono text-sm font-bold',
+            'text-sm font-bold tabular-nums',
             hasMax ? 'text-indigo-700 dark:text-indigo-400' : 'text-foreground',
           )}
         >
@@ -597,6 +597,8 @@ function RowInput({
 
 // ─── BulkFillButton ───────────────────────────────────────────────────────────
 
+type BulkTarget = 'max' | 'min' | 'both';
+
 function BulkFillButton({
   labels,
   salePointId,
@@ -610,18 +612,24 @@ function BulkFillButton({
   const qc = useQueryClient();
 
   const [open, setOpen] = useState(false);
+  const [allLabels, setAllLabels] = useState(false);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [target, setTarget] = useState<BulkTarget>('max');
   const [amount, setAmount] = useState('');
+  const [minAmount, setMinAmount] = useState('');
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState('');
 
   const applying = progress !== null && progress.done < progress.total;
 
   const reset = () => {
+    setAllLabels(false);
     setDesde('');
     setHasta('');
+    setTarget('max');
     setAmount('');
+    setMinAmount('');
     setProgress(null);
     setError('');
   };
@@ -634,15 +642,28 @@ function BulkFillButton({
 
   const handleApply = async () => {
     setError('');
-    const startIdx = labels.indexOf(desde.trim());
-    const endIdx = labels.indexOf(hasta.trim());
-    const numAmount = Number(amount.trim());
+
+    // Resolve range
+    const startIdx = allLabels ? 0 : labels.indexOf(desde.trim());
+    const endIdx = allLabels ? labels.length - 1 : labels.indexOf(hasta.trim());
 
     if (startIdx === -1) { setError('Rango inferior no válido.'); return; }
     if (endIdx === -1) { setError('Rango superior no válido.'); return; }
     if (startIdx > endIdx) { setError('El rango inferior debe ser menor o igual al superior.'); return; }
-    if (!Number.isInteger(numAmount) || numAmount <= 0) {
-      setError('El monto debe ser un número entero positivo.');
+
+    // Validate amounts based on target
+    const needsMax = target === 'max' || target === 'both';
+    const needsMin = target === 'min' || target === 'both';
+
+    const numMax = needsMax ? Number(amount.trim()) : 0;
+    const numMin = needsMin ? Number(minAmount.trim()) : 0;
+
+    if (needsMax && (!Number.isInteger(numMax) || numMax <= 0)) {
+      setError('El monto máximo debe ser un número entero positivo.');
+      return;
+    }
+    if (needsMin && (!Number.isInteger(numMin) || numMin <= 0)) {
+      setError('El monto mínimo debe ser un número entero positivo.');
       return;
     }
 
@@ -659,8 +680,8 @@ function BulkFillButton({
             gameId,
             salePointId,
             label,
-            amount: numAmount,
-            minAmount: null,
+            amount: needsMax ? numMax : 0,
+            minAmount: needsMin ? numMin : null,
           }),
         ),
       );
@@ -668,12 +689,14 @@ function BulkFillButton({
       setProgress({ done, total: toApply.length });
     }
 
-    // Force a fresh fetch so the table reflects all changes immediately
-    await qc.invalidateQueries({ queryKey: saleLimitsByNumberKeys.list(salePointId) });
+    await qc.refetchQueries({ queryKey: saleLimitsByNumberKeys.list(salePointId) });
 
     setOpen(false);
     reset();
   };
+
+  const inputClass =
+    'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
     <>
@@ -690,7 +713,7 @@ function BulkFillButton({
         open={open}
         onClose={handleClose}
         title="Relleno masivo"
-        description="Aplicá un monto máximo a un rango de números de una sola vez."
+        description="Aplicá montos a un rango de números de una sola vez."
         size="max-w-sm"
         footer={
           <div className="flex items-center gap-2">
@@ -724,47 +747,117 @@ function BulkFillButton({
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="space-y-1.5">
-              <span className="block text-xs font-semibold text-muted-foreground">
-                Rango inferior
-              </span>
-              <input
-                type="text"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-                placeholder={labels[0] ?? '00'}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </label>
-            <label className="space-y-1.5">
-              <span className="block text-xs font-semibold text-muted-foreground">
-                Rango superior
-              </span>
-              <input
-                type="text"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-                placeholder={labels[labels.length - 1] ?? '99'}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </label>
+          {/* Aplicar tipo */}
+          <div>
+            <span className="block text-xs font-semibold text-muted-foreground mb-1.5">
+              Aplicar a
+            </span>
+            <div className="flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
+              {(
+                [
+                  { value: 'max', label: 'Máximo' },
+                  { value: 'min', label: 'Mínimo' },
+                  { value: 'both', label: 'Ambos' },
+                ] as { value: BulkTarget; label: string }[]
+              ).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTarget(value)}
+                  className={cn(
+                    'flex-1 py-2 text-center transition-colors',
+                    target === value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:bg-secondary',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <label className="space-y-1.5">
-            <span className="block text-xs font-semibold text-muted-foreground">
-              Monto máximo
-            </span>
+          {/* Monto(s) */}
+          <div className={cn('grid gap-3', target === 'both' ? 'grid-cols-2' : 'grid-cols-1')}>
+            {(target === 'max' || target === 'both') && (
+              <label className="space-y-1.5">
+                <span className="block text-xs font-semibold text-muted-foreground">
+                  Monto máximo
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="200"
+                  className={inputClass}
+                />
+              </label>
+            )}
+            {(target === 'min' || target === 'both') && (
+              <label className="space-y-1.5">
+                <span className="block text-xs font-semibold text-muted-foreground">
+                  Monto mínimo
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={minAmount}
+                  onChange={(e) => setMinAmount(e.target.value)}
+                  placeholder="50"
+                  className={inputClass}
+                />
+              </label>
+            )}
+          </div>
+
+          {/* Todas las apuestas */}
+          <label className="flex cursor-pointer items-center gap-2.5">
             <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="200"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              type="checkbox"
+              checked={allLabels}
+              onChange={(e) => setAllLabels(e.target.checked)}
+              className="size-4 rounded border-border accent-primary"
             />
+            <span className="text-sm font-medium text-foreground">
+              Aplicar a todas las apuestas
+            </span>
+            <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+              {labels.length} números
+            </span>
           </label>
+
+          {/* Rango (disabled cuando allLabels) */}
+          {!allLabels && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1.5">
+                <span className="block text-xs font-semibold text-muted-foreground">
+                  Rango inferior
+                </span>
+                <input
+                  type="text"
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
+                  placeholder={labels[0] ?? '00'}
+                  className={inputClass}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block text-xs font-semibold text-muted-foreground">
+                  Rango superior
+                </span>
+                <input
+                  type="text"
+                  value={hasta}
+                  onChange={(e) => setHasta(e.target.value)}
+                  placeholder={labels[labels.length - 1] ?? '99'}
+                  className={inputClass}
+                />
+              </label>
+            </div>
+          )}
 
           {error && (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
