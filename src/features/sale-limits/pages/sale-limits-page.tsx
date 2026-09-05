@@ -25,7 +25,7 @@ const PAGE_SIZE = 100;
 
 const MONTHS_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'] as const;
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] as const;
-const DAYS_PER_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+const DAYS_PER_MONTH = [31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
