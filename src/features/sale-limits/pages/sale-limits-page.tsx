@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Layers, Loader2, MapPin, ShieldAlert } from 'lucide-react';
 
 import { useGames } from '@/features/games/hooks/use-games';
 import {
+  saleLimitsByNumberKeys,
   useDeleteSaleLimitByNumber,
   useSaleLimitsByNumber,
   useUpsertSaleLimitByNumber,
@@ -140,7 +142,7 @@ export function SaleLimitsPage() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShieldAlert className="size-5 text-muted-foreground" />
-          <h1 className="text-2xl font-black tracking-tight">Límites de Venta</h1>
+          <h1 className="text-2xl font-black tracking-tight">Montos Máximos</h1>
         </div>
         <p className="max-w-md text-xs text-muted-foreground">
           Tope en córdobas por número por sorteo. Al alcanzarse, ese número queda
@@ -148,67 +150,64 @@ export function SaleLimitsPage() {
         </p>
       </header>
 
-      {/* Sucursal selector */}
+      {/* Filters + action */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <label className="space-y-1.5">
-          <span className="block text-xs font-semibold text-muted-foreground">
-            Sucursal
-          </span>
-          <Select
-            value={salePointId}
-            onChange={setSalePointId}
-            leadingIcon={<MapPin className="size-4" />}
-            placeholder={
-              loadingSalePoints ? 'Cargando…' : 'Elegí la sucursal a configurar'
-            }
-            disabled={loadingSalePoints}
-            options={salePointsActive.map((sp) => ({
-              value: sp.id,
-              label: sp.name,
-            }))}
-          />
-        </label>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="min-w-48 flex-1 space-y-1.5">
+            <span className="block text-xs font-semibold text-muted-foreground">
+              Sucursal
+            </span>
+            <Select
+              value={salePointId}
+              onChange={setSalePointId}
+              leadingIcon={<MapPin className="size-4" />}
+              placeholder={loadingSalePoints ? 'Cargando…' : 'Elegí la sucursal'}
+              disabled={loadingSalePoints}
+              options={salePointsActive.map((sp) => ({
+                value: sp.id,
+                label: sp.name,
+              }))}
+            />
+          </label>
+
+          <label className="min-w-48 flex-1 space-y-1.5">
+            <span className="block text-xs font-semibold text-muted-foreground">
+              Juego
+            </span>
+            <Select
+              value={activeGameId}
+              onChange={setActiveGameId}
+              placeholder="Elegí un juego"
+              disabled={!salePointId || gamesActive.length === 0}
+              options={gamesActive.map((g) => ({ value: g.id, label: g.name }))}
+            />
+          </label>
+
+          {salePointId && activeGame && (
+            <BulkFillButton
+              labels={labels}
+              salePointId={salePointId}
+              gameId={activeGame.id}
+            />
+          )}
+        </div>
       </div>
 
       {!salePointId ? (
         <EmptyState />
       ) : (
-        <div className="rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          {/* Game tabs */}
-          <div className="overflow-x-auto border-b border-border">
-            <div className="flex min-w-max">
-              {gamesActive.map((g) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => setActiveGameId(g.id)}
-                  className={cn(
-                    'whitespace-nowrap px-5 py-3 text-sm font-semibold transition-colors',
-                    g.id === activeGame?.id
-                      ? 'border-b-2 border-primary text-primary'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {g.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Numbers table */}
-          <div className="p-4">
-            {activeGame && (
-              <NumbersTable
-                key={`${salePointId}-${activeGame.id}`}
-                game={activeGame}
-                salePointId={salePointId}
-                labels={labels}
-                limitsByLabel={limitsByLabel}
-                salesByLabel={salesByLabel}
-                loading={loadingLimits}
-              />
-            )}
-          </div>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          {activeGame && (
+            <NumbersTable
+              key={`${salePointId}-${activeGame.id}`}
+              game={activeGame}
+              salePointId={salePointId}
+              labels={labels}
+              limitsByLabel={limitsByLabel}
+              salesByLabel={salesByLabel}
+              loading={loadingLimits}
+            />
+          )}
         </div>
       )}
     </div>
@@ -243,62 +242,57 @@ function NumbersTable({
   const rangeStart = page * PAGE_SIZE;
   const rangeEnd = Math.min(rangeStart + PAGE_SIZE - 1, labels.length - 1);
 
-  return (
-    <div className="space-y-3">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {needsPaging ? (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            rangeLabel={`${labels[rangeStart]} – ${labels[rangeEnd]}`}
-            onChange={setPage}
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            <span className="font-semibold tabular-nums text-foreground">{labels.length}</span> números
-          </span>
-        )}
-        <BulkFillButton
-          labels={labels}
-          salePointId={salePointId}
-          gameId={game.id}
-        />
+  if (loading) {
+    return (
+      <div className="py-16 text-center">
+        <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
 
-      {/* Content */}
-      {loading ? (
-        <div className="py-10 text-center">
-          <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
-        </div>
-      ) : game.type === 'date' ? (
-        <DateTable
-          salePointId={salePointId}
-          gameId={game.id}
-          labels={labels}
-          limitsByLabel={limitsByLabel}
-          salesByLabel={salesByLabel}
-        />
-      ) : (
-        <div className="overflow-x-auto">
-          <NumberTable
-            labels={visible}
-            salePointId={salePointId}
-            gameId={game.id}
-            limitsByLabel={limitsByLabel}
-            salesByLabel={salesByLabel}
-          />
-        </div>
-      )}
+  if (game.type === 'date') {
+    return (
+      <DateTable
+        salePointId={salePointId}
+        gameId={game.id}
+        labels={labels}
+        limitsByLabel={limitsByLabel}
+        salesByLabel={salesByLabel}
+      />
+    );
+  }
 
-      {needsPaging && (
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          rangeLabel={`${labels[rangeStart]} – ${labels[rangeEnd]}`}
-          onChange={setPage}
-        />
-      )}
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <TableHead />
+        <tbody className="divide-y divide-border/50">
+          {visible.map((label) => (
+            <NumberRow
+              key={label}
+              label={label}
+              salePointId={salePointId}
+              gameId={game.id}
+              existing={limitsByLabel.get(label)}
+              soldToday={salesByLabel.get(label) ?? 0}
+            />
+          ))}
+        </tbody>
+        {needsPaging && (
+          <tfoot>
+            <tr>
+              <td colSpan={4} className="border-t border-border bg-slate-50/60 px-4 py-2.5">
+                <TablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  rangeLabel={`${labels[rangeStart]} – ${labels[rangeEnd]}`}
+                  onChange={setPage}
+                />
+              </td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
     </div>
   );
 }
@@ -307,48 +301,14 @@ function NumbersTable({
 
 function TableHead() {
   return (
-    <thead>
-      <tr className="border-b border-border text-left text-xs font-semibold text-muted-foreground">
-        <th className="pb-2 pr-4 font-semibold">Apuesta</th>
-        <th className="pb-2 pr-4 text-right font-semibold">Monto actual</th>
-        <th className="pb-2 pr-3 text-right font-semibold">Monto máximo</th>
-        <th className="pb-2 text-right font-semibold">Monto mín</th>
+    <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+      <tr>
+        <th className="px-6 py-3">Apuesta</th>
+        <th className="px-6 py-3 text-right">Monto actual</th>
+        <th className="px-6 py-3 text-right">Monto máximo</th>
+        <th className="px-6 py-3 text-right">Monto mín</th>
       </tr>
     </thead>
-  );
-}
-
-// ─── NumberTable ──────────────────────────────────────────────────────────────
-
-function NumberTable({
-  labels,
-  salePointId,
-  gameId,
-  limitsByLabel,
-  salesByLabel,
-}: {
-  labels: string[];
-  salePointId: string;
-  gameId: string;
-  limitsByLabel: Map<string, SaleLimitByNumber>;
-  salesByLabel: Map<string, number>;
-}) {
-  return (
-    <table className="w-full text-sm">
-      <TableHead />
-      <tbody>
-        {labels.map((label) => (
-          <NumberRow
-            key={label}
-            label={label}
-            salePointId={salePointId}
-            gameId={gameId}
-            existing={limitsByLabel.get(label)}
-            soldToday={salesByLabel.get(label) ?? 0}
-          />
-        ))}
-      </tbody>
-    </table>
   );
 }
 
@@ -378,16 +338,21 @@ function DateTable({
   }, [labels]);
 
   return (
-    <div className="overflow-x-auto space-y-5">
-      {byMonth.map((monthLabels, mi) =>
-        monthLabels.length === 0 ? null : (
-          <div key={mi}>
-            <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              {MONTHS_FULL[mi]}
-            </h3>
-            <table className="w-full text-sm">
-              <TableHead />
-              <tbody>
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <TableHead />
+        <tbody className="divide-y divide-border/50">
+          {byMonth.map((monthLabels, mi) =>
+            monthLabels.length === 0 ? null : (
+              <>
+                <tr key={`month-${mi}`} className="bg-slate-50/40">
+                  <td
+                    colSpan={4}
+                    className="px-6 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground"
+                  >
+                    {MONTHS_FULL[mi]}
+                  </td>
+                </tr>
                 {monthLabels.map((label) => (
                   <NumberRow
                     key={label}
@@ -398,11 +363,11 @@ function DateTable({
                     soldToday={salesByLabel.get(label) ?? 0}
                   />
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ),
-      )}
+              </>
+            ),
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -501,7 +466,6 @@ function NumberRow({
   const hasMax = !!existing;
   const showMin = hasMax || draftMax.trim() !== '';
 
-  // Color the sold amount when approaching the configured limit
   const pct = existing && soldToday > 0 ? soldToday / existing.amount : 0;
   const soldColor =
     pct >= 1
@@ -511,9 +475,8 @@ function NumberRow({
         : 'text-muted-foreground';
 
   return (
-    <tr className="border-b border-border/50 last:border-0 transition-colors hover:bg-slate-50/40 dark:hover:bg-white/[0.02]">
-      {/* Apuesta */}
-      <td className="py-1.5 pr-4">
+    <tr className="transition-colors hover:bg-slate-50/40 dark:hover:bg-white/[0.02]">
+      <td className="px-6 py-2.5">
         <span
           className={cn(
             'font-mono text-sm font-bold',
@@ -524,18 +487,16 @@ function NumberRow({
         </span>
       </td>
 
-      {/* Monto actual */}
       <td
         className={cn(
-          'py-1.5 pr-4 text-right text-sm tabular-nums',
+          'px-6 py-2.5 text-right text-sm tabular-nums',
           soldToday > 0 ? soldColor : 'text-muted-foreground/30',
         )}
       >
         {soldToday > 0 ? formatCurrency(soldToday) : '—'}
       </td>
 
-      {/* Monto máximo */}
-      <td className="py-1.5 pr-3">
+      <td className="px-6 py-2.5">
         <RowInput
           value={draftMax}
           onChange={setDraftMax}
@@ -546,8 +507,7 @@ function NumberRow({
         />
       </td>
 
-      {/* Monto mín */}
-      <td className="py-1.5">
+      <td className="px-6 py-2.5">
         {showMin ? (
           <RowInput
             value={draftMin}
@@ -591,7 +551,7 @@ function RowInput({
 }) {
   const isIndigo = tone === 'indigo';
   return (
-    <div className="relative flex justify-end">
+    <div className="flex justify-end">
       <div className="relative w-28">
         <input
           type="number"
@@ -647,6 +607,7 @@ function BulkFillButton({
   gameId: string;
 }) {
   const upsert = useUpsertSaleLimitByNumber();
+  const qc = useQueryClient();
 
   const [open, setOpen] = useState(false);
   const [desde, setDesde] = useState('');
@@ -707,6 +668,9 @@ function BulkFillButton({
       setProgress({ done, total: toApply.length });
     }
 
+    // Force a fresh fetch so the table reflects all changes immediately
+    await qc.invalidateQueries({ queryKey: saleLimitsByNumberKeys.list(salePointId) });
+
     setOpen(false);
     reset();
   };
@@ -716,9 +680,9 @@ function BulkFillButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm transition-colors hover:bg-secondary"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"
       >
-        <Layers className="size-3.5" />
+        <Layers className="size-4" strokeWidth={2.4} />
         Relleno masivo
       </button>
 
@@ -742,7 +706,10 @@ function BulkFillButton({
               type="button"
               onClick={handleApply}
               disabled={applying}
-              className="inline-flex min-w-[90px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className={cn(
+                'inline-flex min-w-[90px] items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-1.5 text-sm font-bold text-primary-foreground',
+                applying ? 'cursor-not-allowed opacity-60' : 'hover:bg-primary/90',
+              )}
             >
               {applying ? (
                 <>
@@ -810,9 +777,9 @@ function BulkFillButton({
   );
 }
 
-// ─── Pagination ────────────────────────────────────────────────────────────────
+// ─── TablePagination ──────────────────────────────────────────────────────────
 
-function Pagination({
+function TablePagination({
   page,
   totalPages,
   rangeLabel,
@@ -824,10 +791,10 @@ function Pagination({
   onChange: (p: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between">
       <span className="text-xs text-muted-foreground">
         <span className="font-mono font-semibold text-foreground">{rangeLabel}</span>
-        {' · '}pág. {page + 1}/{totalPages}
+        {' · '}pág. {page + 1} / {totalPages}
       </span>
       <div className="flex items-center gap-1">
         <button

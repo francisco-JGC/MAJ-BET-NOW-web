@@ -21,7 +21,6 @@ export const APP_ROUTES = {
   sucursales: '/sucursales',
   sucursalConfig: '/sucursales/:id/configuracion',
   draws: '/sorteos',
-  saleLimits: '/limites-venta',
   latestResults: '/ultimos-resultados',
   systemConfig: '/configuracion-sistema',
 } as const;
