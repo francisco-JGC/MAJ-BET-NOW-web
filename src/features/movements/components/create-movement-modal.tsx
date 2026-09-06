@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowUpRight,
   Calendar,
-  Gift,
   Loader2,
-  Minus,
-  Plus,
   Save,
   User,
   Wallet,
@@ -50,20 +47,6 @@ const SELLER_TYPE_OPTIONS: TypeOption[] = [
     icon: <Wallet className="size-4 text-blue-600" />,
     hint: 'Devolución al vendedor',
   },
-  {
-    id: 'ajuste_mas',
-    type: MovementType.DEPOSIT,
-    label: 'Ajuste +',
-    icon: <Plus className="size-4 text-emerald-600" />,
-    hint: 'Corrección que suma al balance',
-  },
-  {
-    id: 'ajuste_menos',
-    type: MovementType.WITHDRAWAL,
-    label: 'Ajuste −',
-    icon: <Minus className="size-4 text-rose-600" />,
-    hint: 'Corrección que resta del balance',
-  },
 ];
 
 function defaultOptionId(defaultType?: MovementType): string {
@@ -77,7 +60,6 @@ interface FormState {
   amount: string;
   description: string;
   occurredDate: string;
-  isPrizePayment: boolean;
 }
 
 function isoDate(d: Date): string {
@@ -93,7 +75,6 @@ const EMPTY: FormState = {
   amount: '',
   description: '',
   occurredDate: isoDate(new Date()),
-  isPrizePayment: false,
 };
 
 export function CreateMovementModal({
@@ -145,7 +126,6 @@ export function CreateMovementModal({
     if (!isValid || isPending) return;
     await mutateAsync({
       sellerId: form.sellerId,
-      isPrizePayment: form.isPrizePayment,
       type: selectedOption.type,
       amount: parsedAmount,
       description: form.description.trim() || undefined,
@@ -229,21 +209,6 @@ export function CreateMovementModal({
             ))}
           </div>
         </Field>
-
-        {/* Prize payment checkbox */}
-        <label className="flex items-center gap-2.5 rounded-lg border border-border bg-secondary/30 px-3 py-2.5 text-sm text-foreground cursor-pointer hover:bg-secondary/50 transition">
-          <input
-            type="checkbox"
-            checked={form.isPrizePayment}
-            onChange={(e) => set('isPrizePayment', e.target.checked)}
-            className="size-4 rounded border-border accent-primary"
-          />
-          <Gift className="size-4 shrink-0 text-amber-500" strokeWidth={2.2} />
-          <span className="font-medium">Pago de premio</span>
-          <span className="text-muted-foreground text-xs">
-            (marcar si este movimiento corresponde al pago de un premio ganado)
-          </span>
-        </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
