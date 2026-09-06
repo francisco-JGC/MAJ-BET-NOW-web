@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Layers, Loader2, MapPin, ShieldAlert } from 'lucide-react';
 
-import { useGames } from '@/features/games/hooks/use-games';
+import { useGameSchedules, useGames } from '@/features/games/hooks/use-games';
 import {
   saleLimitsByNumberKeys,
   useDeleteSaleLimitByNumber,
@@ -73,9 +73,29 @@ function normSaleLabel(rawLabel: string, isDate: boolean): string {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+/** Devuelve "HH:MM" en hora Managua (UTC-6) para ahora mismo. */
+function nowTimeManagua(): string {
+  const d = new Date();
+  const minguaOffset = -6 * 60;
+  const utcMinutes = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const localMinutes = ((utcMinutes + minguaOffset) % (24 * 60) + 24 * 60) % (24 * 60);
+  const hh = Math.floor(localMinutes / 60).toString().padStart(2, '0');
+  const mm = (localMinutes % 60).toString().padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Elige el sorteo más próximo: el más cercano siguiente a ahora; si no hay,
+ *  el último del día. */
+function pickNearestDrawTime(times: string[], now: string): string | null {
+  if (times.length === 0) return null;
+  const upcoming = times.filter((t) => t >= now);
+  return upcoming.length > 0 ? upcoming[0] : times[times.length - 1];
+}
+
 export function SaleLimitsPage() {
   const [salePointId, setSalePointId] = useState('');
   const [activeGameId, setActiveGameId] = useState('');
+  const [drawTime, setDrawTime] = useState<string>('');
   const today = useMemo(isoToday, []);
 
   const { data: games } = useGames();
@@ -83,6 +103,23 @@ export function SaleLimitsPage() {
   const { data: limits, isLoading: loadingLimits } = useSaleLimitsByNumber(
     salePointId || null,
   );
+  const { data: schedules } = useGameSchedules(activeGameId || null);
+
+  // Sorteos activos del juego seleccionado, ordenados por hora
+  const drawTimes = useMemo(() => {
+    if (!schedules) return [];
+    return schedules
+      .filter((s) => s.isActive)
+      .map((s) => s.drawTime)
+      .sort();
+  }, [schedules]);
+
+  // Auto-seleccionar el sorteo más próximo cuando cambia el juego o los sorteos
+  useEffect(() => {
+    if (drawTimes.length === 0) { setDrawTime(''); return; }
+    const nearest = pickNearestDrawTime(drawTimes, nowTimeManagua());
+    setDrawTime(nearest ?? drawTimes[0]);
+  }, [drawTimes]);
 
   const salesParams = useMemo(
     () => ({
@@ -90,8 +127,9 @@ export function SaleLimitsPage() {
       gameId: activeGameId || undefined,
       from: salePointId ? `${today}T00:00:00-06:00` : undefined,
       to: salePointId ? endOfDayParam(today) : undefined,
+      drawTime: drawTime || undefined,
     }),
-    [salePointId, activeGameId, today],
+    [salePointId, activeGameId, today, drawTime],
   );
   const { data: salesData } = useSalesByNumber(salesParams);
 
@@ -110,6 +148,12 @@ export function SaleLimitsPage() {
       setActiveGameId(gamesActive[0].id);
     }
   }, [gamesActive, activeGameId]);
+
+  // Resetea el sorteo seleccionado cuando el usuario cambia de juego
+  const handleGameChange = useCallback((gameId: string) => {
+    setActiveGameId(gameId);
+    setDrawTime('');
+  }, []);
 
   const activeGame = gamesActive.find((g) => g.id === activeGameId) ?? gamesActive[0];
   const isDate = activeGame?.type === 'date';
@@ -176,12 +220,26 @@ export function SaleLimitsPage() {
             </span>
             <Select
               value={activeGameId}
-              onChange={setActiveGameId}
+              onChange={handleGameChange}
               placeholder="Elegí un juego"
               disabled={!salePointId || gamesActive.length === 0}
               options={gamesActive.map((g) => ({ value: g.id, label: g.name }))}
             />
           </label>
+
+          {activeGameId && drawTimes.length > 0 && (
+            <label className="min-w-36 space-y-1.5">
+              <span className="block text-xs font-semibold text-muted-foreground">
+                Sorteo
+              </span>
+              <Select
+                value={drawTime}
+                onChange={setDrawTime}
+                placeholder="Sorteo"
+                options={drawTimes.map((t) => ({ value: t, label: t }))}
+              />
+            </label>
+          )}
 
           {salePointId && activeGame && (
             <BulkFillButton
