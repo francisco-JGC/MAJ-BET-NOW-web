@@ -41,3 +41,15 @@ const COMPACT_FMT = new Intl.NumberFormat('en-US', {
 export function formatCompact(value: number): string {
   return COMPACT_FMT.format(value);
 }
+
+/**
+ * Converts a "HH:MM" draw-time string to a 12-hour label: "15:00" → "3:00 PM".
+ * Pure arithmetic — no Intl/locale dependency so it renders consistently on
+ * Android/iOS mobile regardless of the device's regional settings.
+ */
+export function formatDrawTimeLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const twelve = h % 12 === 0 ? 12 : h % 12;
+  return `${twelve}:${String(m).padStart(2, '0')} ${suffix}`;
+}

@@ -14,7 +14,7 @@ import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-
 import { useUsers } from '@/features/users/hooks/use-users';
 import { UserRole } from '@/features/auth/types';
 import { cn } from '@/shared/lib/cn';
-import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 import { TableLoadingOverlay } from '@/shared/ui/table-loading-overlay';
 
@@ -22,12 +22,6 @@ import type { DrawSchedule } from '@/features/games/types';
 
 const MANAGUA_OFFSET = '-06:00';
 
-const TIME_FMT = new Intl.DateTimeFormat('es-NI', {
-  timeZone: 'America/Managua',
-  hour: 'numeric',
-  minute: '2-digit',
-  hour12: true,
-});
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -53,10 +47,7 @@ function generateDrawOptions(
   for (const s of active) {
     if (seen.has(s.drawTime)) continue;
     seen.add(s.drawTime);
-    // Format using an arbitrary fixed date just to get the time label
-    const label = TIME_FMT.format(
-      new Date(`2000-01-01T${s.drawTime}:00${MANAGUA_OFFSET}`),
-    );
+    const label = formatDrawTimeLabel(s.drawTime);
     options.push({ value: s.drawTime, label });
   }
 

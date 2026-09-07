@@ -17,7 +17,7 @@ import { TicketDetailsModal } from '@/features/tickets/components/ticket-details
 import { useTickets } from '@/features/tickets/hooks/use-tickets';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
-import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
 import {
   SegmentedControl,
   type SegmentTab,
@@ -72,13 +72,6 @@ function formatManaguaTime(iso: string): string {
   return TIME_FMT.format(new Date(iso));
 }
 
-/** "18:00" → "6:00 PM"; "09:30" → "9:30 AM". */
-function formatDrawTimeLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number);
-  const suffix = h < 12 ? 'AM' : 'PM';
-  const twelve = h % 12 === 0 ? 12 : h % 12;
-  return `${twelve}:${String(m).padStart(2, '0')} ${suffix}`;
-}
 
 export function SalesPage() {
   const [status, setStatus] = useState<StatusFilter>('all');

@@ -11,7 +11,7 @@ import {
 } from '@/features/sale-limits-by-number/hooks/use-sale-limits-by-number';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-number';
-import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
 import { cn } from '@/shared/lib/cn';
 import { Modal } from '@/shared/ui/modal';
 import { Select } from '@/shared/ui/select';
@@ -251,7 +251,7 @@ export function SaleLimitsPage() {
                 value={drawTime}
                 onChange={setDrawTime}
                 placeholder="Sorteo"
-                options={drawTimes.map((t) => ({ value: t, label: t }))}
+                options={drawTimes.map((t) => ({ value: t, label: formatDrawTimeLabel(t) }))}
               />
             </label>
           )}

@@ -102,9 +102,9 @@ const SELLER_TYPE_META: Partial<Record<MovementType, { label: string; classes: s
     classes: 'bg-rose-500/10 text-rose-700 ring-rose-500/20',
     icon: <ArrowDownRight className="size-3" strokeWidth={2.6} />,
   },
-  // Crédito: admin da crédito al vendedor → suma a su saldo → verde
+  // Ajuste de premio: admin da crédito al vendedor → suma a su saldo → verde
   [MovementType.WITHDRAWAL]: {
-    label: 'Crédito',
+    label: 'Ajuste de premio',
     classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
     icon: <ArrowUpRight className="size-3" strokeWidth={2.6} />,
   },
@@ -256,7 +256,7 @@ export function MovementsPage() {
                 { value: '', label: 'Todos los tipos' },
                 { value: MovementType.EXPENSE, label: 'Gasto' },
                 { value: MovementType.DEPOSIT, label: 'Depósito / Cobro' },
-                { value: MovementType.WITHDRAWAL, label: 'Retiro / Crédito' },
+                { value: MovementType.WITHDRAWAL, label: 'Retiro / Ajuste de premio' },
                 { value: MovementType.ADJUSTMENT, label: 'Ajuste' },
               ]}
             />

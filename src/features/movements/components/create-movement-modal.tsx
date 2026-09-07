@@ -43,9 +43,9 @@ const SELLER_TYPE_OPTIONS: TypeOption[] = [
   {
     id: 'credito',
     type: MovementType.WITHDRAWAL,
-    label: 'Crédito',
+    label: 'Ajuste de premio',
     icon: <Wallet className="size-4 text-blue-600" />,
-    hint: 'Devolución al vendedor',
+    hint: 'Crédito aplicado al vendedor',
   },
 ];
 
