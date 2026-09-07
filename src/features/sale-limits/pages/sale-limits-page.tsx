@@ -89,7 +89,9 @@ function nowTimeManagua(): string {
 function pickNearestDrawTime(times: string[], now: string): string | null {
   if (times.length === 0) return null;
   const upcoming = times.filter((t) => t >= now);
-  return upcoming.length > 0 ? upcoming[0] : times[times.length - 1];
+  // Si ya pasaron todos los sorteos del día, retorna null para indicar que
+  // no hay sorteo activo. El monto actual se mostrará en 0 hasta el día siguiente.
+  return upcoming.length > 0 ? upcoming[0] : null;
 }
 
 export function SaleLimitsPage() {
@@ -119,7 +121,9 @@ export function SaleLimitsPage() {
     if (drawTimes.length === 0) { setDrawTime(''); return; }
     const update = () => {
       const nearest = pickNearestDrawTime(drawTimes, nowTimeManagua());
-      setDrawTime(nearest ?? drawTimes[0]);
+      // nearest es null cuando ya pasaron todos los sorteos del día →
+      // drawTime queda vacío y el monto actual muestra 0.
+      setDrawTime(nearest ?? '');
     };
     update();
     // Re-evalúa cada minuto para que cuando pase la hora de un sorteo,
@@ -175,6 +179,9 @@ export function SaleLimitsPage() {
   }, [limits, activeGame]);
 
   const salesByLabel = useMemo(() => {
+    // drawTime vacío con sorteos configurados = todos los sorteos del día
+    // ya pasaron. No hay sorteo activo → monto actual = 0 para todos.
+    if (!drawTime && drawTimes.length > 0) return new Map<string, number>();
     const map = new Map<string, number>();
     for (const row of salesData?.items ?? []) {
       if (row.gameId !== activeGame?.id) continue;
@@ -182,7 +189,7 @@ export function SaleLimitsPage() {
       map.set(key, (map.get(key) ?? 0) + row.totalAmount);
     }
     return map;
-  }, [salesData, activeGame, isDate]);
+  }, [salesData, activeGame, isDate, drawTime, drawTimes]);
 
   const labels = useMemo(
     () => (activeGame ? generateLabels(activeGame) : []),
