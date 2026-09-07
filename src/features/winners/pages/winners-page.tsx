@@ -240,9 +240,9 @@ export function WinnersPage() {
             key={w.ticket.id}
             winner={w}
             gameName={gameById.get(w.ticket.gameId)?.name ?? null}
-            sellerName={userById.get(w.ticket.sellerId)?.name ?? null}
+            sellerName={w.ticket.sellerName ?? userById.get(w.ticket.sellerId)?.name ?? null}
             salePointName={
-              salePointById.get(w.ticket.salePointId)?.name ?? null
+              w.ticket.salePointName ?? salePointById.get(w.ticket.salePointId)?.name ?? null
             }
             onClick={() => setSelected(w)}
           />
@@ -253,9 +253,9 @@ export function WinnersPage() {
         <WinnerDetailsModal
           winner={selected}
           gameName={gameById.get(selected.ticket.gameId)?.name ?? null}
-          sellerName={userById.get(selected.ticket.sellerId)?.name ?? null}
+          sellerName={selected.ticket.sellerName ?? userById.get(selected.ticket.sellerId)?.name ?? null}
           salePointName={
-            salePointById.get(selected.ticket.salePointId)?.name ?? null
+            selected.ticket.salePointName ?? salePointById.get(selected.ticket.salePointId)?.name ?? null
           }
           onClose={() => setSelected(null)}
           onViewTicket={() => {
@@ -279,9 +279,9 @@ export function WinnersPage() {
           onClose={() => setViewingTicket(null)}
           ticket={viewingTicket}
           gameName={gameById.get(viewingTicket.gameId)?.name ?? null}
-          sellerName={userById.get(viewingTicket.sellerId)?.name ?? null}
+          sellerName={viewingTicket.sellerName ?? userById.get(viewingTicket.sellerId)?.name ?? null}
           salePointName={
-            salePointById.get(viewingTicket.salePointId)?.name ?? null
+            viewingTicket.salePointName ?? salePointById.get(viewingTicket.salePointId)?.name ?? null
           }
         />
       )}

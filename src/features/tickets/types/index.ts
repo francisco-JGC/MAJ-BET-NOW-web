@@ -14,7 +14,9 @@ export interface Ticket {
   folio: string;
   gameId: string;
   salePointId: string;
+  salePointName: string | null;
   sellerId: string;
+  sellerName: string | null;
   client: string | null;
   status: TicketStatus;
   voidedAt: string | null;
