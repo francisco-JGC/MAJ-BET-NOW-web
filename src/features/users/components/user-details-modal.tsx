@@ -33,6 +33,7 @@ interface Props {
 }
 
 interface FormState {
+  username: string;
   name: string;
   password: string;
   role: UserRole;
@@ -45,6 +46,7 @@ interface FormState {
 
 function stateFromUser(user: User): FormState {
   return {
+    username: user.username,
     name: user.name,
     password: '',
     role: user.role,
@@ -99,7 +101,8 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     form.paymentPercentage === '' ||
     (Number.isInteger(parsedPct) && parsedPct >= 0 && parsedPct <= 100);
   const pwdValid = form.password === '' || form.password.length >= 6;
-  const isValid = trimmed.name.length > 0 && pctValid && pwdValid;
+  const usernameValid = form.username.trim().length >= 3;
+  const isValid = trimmed.name.length > 0 && pctValid && pwdValid && usernameValid;
 
   const handleGenerate = () => {
     set('password', generatePassword());
@@ -113,9 +116,11 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     // Al cambiar de vendedor a otro rol, se nullea para no dejar valores
     // "colgados" sin significado.
     const isSeller = form.role === UserRole.SELLER;
+    const trimmedUsername = form.username.trim();
     await mutateAsync({
       id: user.id,
       payload: {
+        username: trimmedUsername !== user.username ? trimmedUsername : undefined,
         name: trimmed.name !== user.name ? trimmed.name : undefined,
         role: form.role !== user.role ? form.role : undefined,
         password: form.password ? form.password : undefined,
@@ -415,6 +420,17 @@ function EditForm({
           value={form.name}
           onChange={(e) => onChange('name', e.target.value)}
           maxLength={120}
+          className={inputClass}
+        />
+      </Field>
+
+      <Field label="Usuario de inicio de sesión" hint="Mínimo 3 caracteres" required>
+        <input
+          type="text"
+          value={form.username}
+          onChange={(e) => onChange('username', e.target.value)}
+          maxLength={60}
+          autoComplete="off"
           className={inputClass}
         />
       </Field>
