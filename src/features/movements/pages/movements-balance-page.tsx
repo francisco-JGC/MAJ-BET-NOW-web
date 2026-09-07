@@ -549,7 +549,7 @@ function SellerCards({
 
 const MOVEMENT_LABEL: Record<string, string> = {
   [MovementType.DEPOSIT]: 'Cobro',
-  [MovementType.WITHDRAWAL]: 'Crédito',
+  [MovementType.WITHDRAWAL]: 'Ajuste de premio',
   [MovementType.ADJUSTMENT]: 'Ajuste',
   [MovementType.EXPENSE]: 'Gasto',
   [MovementType.OPENING]: 'Apertura de caja',
@@ -704,10 +704,10 @@ function SellerCard({
         )}
         {credits > 0 && (
           <Stat
-            label="Créditos al vendedor"
+            label="Ajuste de premio"
             value={credits}
             tone="rose"
-            hint="Devolución o ajuste a favor"
+            hint="Crédito aplicado al vendedor"
           />
         )}
         {prizePayments > 0 && (
