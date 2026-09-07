@@ -162,6 +162,15 @@ export function SalesPage() {
     return m;
   }, [sellersPage]);
 
+  const sellerOptions = useMemo(() => {
+    const all = sellersPage?.items ?? [];
+    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
+    return [
+      { value: '', label: 'Todos los vendedores' },
+      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+    ];
+  }, [sellersPage, salePointId]);
+
   // Unique schedule times, sorted ascending. A game can have multiple
   // schedules with the same time (different weekdays) — dedupe them so the
   // dropdown only lists each "sorteo hour" once.
@@ -300,6 +309,7 @@ export function SalesPage() {
               value={salePointId}
               onChange={(v) => {
                 setSalePointId(v);
+                setSellerId('');
                 setPage(0);
               }}
               leadingIcon={<MapPin className="size-4" />}
@@ -322,13 +332,7 @@ export function SalesPage() {
               }}
               leadingIcon={<UserRound className="size-4" />}
               placeholder="Todos"
-              options={[
-                { value: '', label: 'Todos los vendedores' },
-                ...(sellersPage?.items.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })) ?? []),
-              ]}
+              options={sellerOptions}
             />
           </Field>
           <div className="grid grid-cols-2 gap-2">

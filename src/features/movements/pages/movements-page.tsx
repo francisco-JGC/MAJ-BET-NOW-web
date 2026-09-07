@@ -165,6 +165,15 @@ export function MovementsPage() {
   const { data: usersPage } = useUsers({ limit: 200, offset: 0 });
   const { data: sellersPage } = useUsers({ role: UserRole.SELLER, limit: 200, offset: 0 });
 
+  const sellerOptions = useMemo(() => {
+    const all = sellersPage?.items ?? [];
+    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
+    return [
+      { value: '', label: 'Todos los vendedores' },
+      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+    ];
+  }, [sellersPage, salePointId]);
+
   const salePointById = useMemo(() => {
     const m = new Map<string, SalePoint>();
     for (const sp of salePoints ?? []) m.set(sp.id, sp);
@@ -231,13 +240,7 @@ export function MovementsPage() {
               }}
               leadingIcon={<UserIcon className="size-4" />}
               placeholder="Todos"
-              options={[
-                { value: '', label: 'Todos los vendedores' },
-                ...(sellersPage?.items.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })) ?? []),
-              ]}
+              options={sellerOptions}
             />
           </Field>
           <Field label="Tipo">

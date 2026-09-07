@@ -94,6 +94,15 @@ export function WinnersPage() {
     return m;
   }, [sellersPage]);
 
+  const sellerOptions = useMemo(() => {
+    const all = sellersPage?.items ?? [];
+    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
+    return [
+      { value: '', label: 'Todos los vendedores' },
+      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+    ];
+  }, [sellersPage, salePointId]);
+
   // Filtro por folio/cliente vive server-side (ver `params.search`); acá
   // simplemente reenviamos la lista.
   const filtered = winners;
@@ -156,7 +165,7 @@ export function WinnersPage() {
           <Field label="Sucursal">
             <Select
               value={salePointId}
-              onChange={setSalePointId}
+              onChange={(v) => { setSalePointId(v); setSellerId(''); }}
               leadingIcon={<MapPin className="size-4" />}
               placeholder="Todas"
               options={[
@@ -174,13 +183,7 @@ export function WinnersPage() {
               onChange={setSellerId}
               leadingIcon={<UserRound className="size-4" />}
               placeholder="Todos"
-              options={[
-                { value: '', label: 'Todos los vendedores' },
-                ...(sellersPage?.items.map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                })) ?? []),
-              ]}
+              options={sellerOptions}
             />
           </Field>
           <div className="grid grid-cols-2 gap-2">
