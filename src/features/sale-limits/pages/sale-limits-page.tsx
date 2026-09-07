@@ -117,8 +117,16 @@ export function SaleLimitsPage() {
   // Auto-seleccionar el sorteo más próximo cuando cambia el juego o los sorteos
   useEffect(() => {
     if (drawTimes.length === 0) { setDrawTime(''); return; }
-    const nearest = pickNearestDrawTime(drawTimes, nowTimeManagua());
-    setDrawTime(nearest ?? drawTimes[0]);
+    const update = () => {
+      const nearest = pickNearestDrawTime(drawTimes, nowTimeManagua());
+      setDrawTime(nearest ?? drawTimes[0]);
+    };
+    update();
+    // Re-evalúa cada minuto para que cuando pase la hora de un sorteo,
+    // el drawTime avance automáticamente al siguiente y el monto actual
+    // se reinicie sin necesidad de recargar la página.
+    const id = setInterval(update, 60_000);
+    return () => clearInterval(id);
   }, [drawTimes]);
 
   const salesParams = useMemo(
