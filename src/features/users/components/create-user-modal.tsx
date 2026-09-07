@@ -176,15 +176,13 @@ export function CreateUserModal({ open, onClose }: Props) {
 
         <Field
           label="Nombre de usuario"
-          hint="Sin espacios, mínimo 3 caracteres"
+          hint="Mínimo 3 caracteres"
           required
         >
           <input
             type="text"
             value={form.username}
-            onChange={(e) =>
-              set('username', e.target.value.replace(/\s+/g, ''))
-            }
+            onChange={(e) => set('username', e.target.value)}
             placeholder="ej. juanperez"
             maxLength={60}
             className={inputClass}

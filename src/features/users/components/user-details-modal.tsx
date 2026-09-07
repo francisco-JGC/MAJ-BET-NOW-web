@@ -28,6 +28,8 @@ interface Props {
   open: boolean;
   onClose: () => void;
   user: User | null;
+  /** When true the modal opens directly in edit mode. */
+  startEditing?: boolean;
 }
 
 interface FormState {
@@ -55,7 +57,7 @@ function stateFromUser(user: User): FormState {
   };
 }
 
-export function UserDetailsModal({ open, onClose, user }: Props) {
+export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
   const session = useSession();
   const canEditRole = session?.user.role === UserRole.ADMIN;
 
@@ -69,11 +71,11 @@ export function UserDetailsModal({ open, onClose, user }: Props) {
   useEffect(() => {
     if (open && user) {
       setForm(stateFromUser(user));
-      setEditing(false);
+      setEditing(!!startEditing);
       setShowPassword(false);
       reset();
     }
-  }, [open, user, reset]);
+  }, [open, user, reset, startEditing]);
 
   const salePointName = useMemo(() => {
     if (!user?.salePointId || !salePoints) return null;

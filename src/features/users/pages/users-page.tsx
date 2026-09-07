@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Users } from 'lucide-react';
 
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
@@ -35,6 +35,7 @@ export function UsersPage() {
   const [page, setPage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const session = useSession();
   const isAdmin = session?.user.role === UserRole.ADMIN;
@@ -63,9 +64,10 @@ export function UsersPage() {
 
   // Selected user is always resolved from the live list so any mutation
   // (edit, toggle access) refreshes the modal without extra plumbing.
+  const activeId = editingId ?? selectedId;
   const selectedUser = useMemo(
-    () => items.find((u) => u.id === selectedId) ?? null,
-    [items, selectedId],
+    () => items.find((u) => u.id === activeId) ?? null,
+    [items, activeId],
   );
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
@@ -140,6 +142,7 @@ export function UsersPage() {
                 <th className="px-6 py-3 text-right">% Pago</th>
                 <th className="px-6 py-3">Rol</th>
                 {isAdmin && <th className="px-6 py-3">Creado por</th>}
+                <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -150,7 +153,7 @@ export function UsersPage() {
               ) : items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={isAdmin ? 8 : 7}
+                    colSpan={isAdmin ? 9 : 8}
                     className="px-6 py-14 text-center text-sm text-muted-foreground"
                   >
                     {search || roleFilter !== 'all'
@@ -170,6 +173,10 @@ export function UsersPage() {
                     }
                     showCreatedBy={isAdmin}
                     onClick={() => setSelectedId(user.id)}
+                    onEdit={(e) => {
+                      e.stopPropagation();
+                      setEditingId(user.id);
+                    }}
                   />
                 ))
               )}
@@ -232,8 +239,12 @@ export function UsersPage() {
 
       <UserDetailsModal
         open={selectedUser !== null}
-        onClose={() => setSelectedId(null)}
+        onClose={() => {
+          setSelectedId(null);
+          setEditingId(null);
+        }}
         user={selectedUser}
+        startEditing={editingId !== null}
       />
     </div>
   );
@@ -244,11 +255,13 @@ function UserRow({
   salePointName,
   showCreatedBy,
   onClick,
+  onEdit,
 }: {
   user: User;
   salePointName: string | null;
   showCreatedBy: boolean;
   onClick: () => void;
+  onEdit: (e: React.MouseEvent) => void;
 }) {
   return (
     <tr
@@ -308,6 +321,17 @@ function UserRow({
           {user.createdByName ?? <Empty />}
         </td>
       )}
+      <td className="px-4 py-3.5 text-right">
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label="Editar usuario"
+          title="Editar"
+          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <Pencil className="size-3.5" strokeWidth={2.4} />
+        </button>
+      </td>
     </tr>
   );
 }
@@ -346,7 +370,7 @@ function RoleBadge({ role }: { role: UserRole }) {
 }
 
 function SkeletonRow({ showCreatedBy }: { showCreatedBy: boolean }) {
-  const cols = showCreatedBy ? 8 : 7;
+  const cols = showCreatedBy ? 9 : 8;
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
