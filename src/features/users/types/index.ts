@@ -58,6 +58,7 @@ export interface CreateUserPayload {
  * untouched. `password` is only re-hashed on the server when non-empty.
  */
 export interface UpdateUserPayload {
+  username?: string;
   name?: string;
   role?: UserRole;
   isActive?: boolean;
