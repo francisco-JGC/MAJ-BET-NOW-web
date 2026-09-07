@@ -240,10 +240,8 @@ export function WinnersPage() {
             key={w.ticket.id}
             winner={w}
             gameName={gameById.get(w.ticket.gameId)?.name ?? null}
-            sellerName={w.ticket.sellerName ?? userById.get(w.ticket.sellerId)?.name ?? null}
-            salePointName={
-              w.ticket.salePointName ?? salePointById.get(w.ticket.salePointId)?.name ?? null
-            }
+            sellerName={w.ticket.sellerName}
+            salePointName={w.ticket.salePointName}
             onClick={() => setSelected(w)}
           />
         ))}
@@ -253,10 +251,8 @@ export function WinnersPage() {
         <WinnerDetailsModal
           winner={selected}
           gameName={gameById.get(selected.ticket.gameId)?.name ?? null}
-          sellerName={selected.ticket.sellerName ?? userById.get(selected.ticket.sellerId)?.name ?? null}
-          salePointName={
-            selected.ticket.salePointName ?? salePointById.get(selected.ticket.salePointId)?.name ?? null
-          }
+          sellerName={selected.ticket.sellerName}
+          salePointName={selected.ticket.salePointName}
           onClose={() => setSelected(null)}
           onViewTicket={() => {
             // Un ganador implica que el sorteo ya se ejecutó. Forzamos
@@ -279,10 +275,8 @@ export function WinnersPage() {
           onClose={() => setViewingTicket(null)}
           ticket={viewingTicket}
           gameName={gameById.get(viewingTicket.gameId)?.name ?? null}
-          sellerName={viewingTicket.sellerName ?? userById.get(viewingTicket.sellerId)?.name ?? null}
-          salePointName={
-            viewingTicket.salePointName ?? salePointById.get(viewingTicket.salePointId)?.name ?? null
-          }
+          sellerName={viewingTicket.sellerName}
+          salePointName={viewingTicket.salePointName}
         />
       )}
     </div>
