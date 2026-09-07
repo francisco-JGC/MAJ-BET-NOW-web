@@ -8,6 +8,7 @@ import {
   updateDrawResult,
 } from '@/features/draw-results/api/draw-results.api';
 import { toApiError } from '@/shared/api/error-mapper';
+import { winnersQueryKeys } from '@/features/winners/hooks/use-winners';
 
 import type {
   CreateDrawResultPayload,
@@ -54,6 +55,7 @@ export function useCreateDrawResult() {
     onSuccess: (result) => {
       toast.success(`Resultado registrado (${result.winningNumber})`);
       qc.invalidateQueries({ queryKey: drawResultsQueryKeys.all });
+      qc.invalidateQueries({ queryKey: winnersQueryKeys.all });
       // Los pagos pendientes del dashboard se calculan a partir de los
       // resultados registrados; hay que refrescarlos.
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -83,6 +85,7 @@ export function useUpdateDrawResult() {
     onSuccess: (result) => {
       toast.success(`Resultado actualizado (${result.winningNumber})`);
       qc.invalidateQueries({ queryKey: drawResultsQueryKeys.all });
+      qc.invalidateQueries({ queryKey: winnersQueryKeys.all });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (error) => {
@@ -106,6 +109,7 @@ export function useDeleteDrawResult() {
     onSuccess: () => {
       toast.success('Resultado eliminado');
       qc.invalidateQueries({ queryKey: drawResultsQueryKeys.all });
+      qc.invalidateQueries({ queryKey: winnersQueryKeys.all });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (error) => {
