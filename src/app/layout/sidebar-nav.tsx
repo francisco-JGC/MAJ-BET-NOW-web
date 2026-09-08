@@ -114,7 +114,7 @@ function SidebarNavItem({
               : 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
             : compact
               ? 'text-foreground/70 hover:bg-primary/5 hover:text-foreground'
-              : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
+              : 'text-primary-foreground hover:bg-white/10',
         )
       }
     >
@@ -129,7 +129,7 @@ function SidebarNavItem({
                   : 'text-foreground/50 group-hover:text-foreground'
                 : isActive
                   ? 'text-primary-foreground'
-                  : 'text-primary-foreground/60 group-hover:text-primary-foreground',
+                  : 'text-primary-foreground',
             )}
             strokeWidth={isActive ? 2.4 : 2}
           />
@@ -181,15 +181,13 @@ function SidebarNavGroup({
           'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all',
           anyChildActive || open
             ? 'bg-white/20 text-primary-foreground shadow-sm shadow-black/20'
-            : 'text-primary-foreground/70 hover:bg-white/10 hover:text-primary-foreground',
+            : 'text-primary-foreground hover:bg-white/10',
         )}
       >
         <Icon
           className={cn(
             'size-5 shrink-0 transition-colors',
-            anyChildActive || open
-              ? 'text-primary-foreground'
-              : 'text-primary-foreground/60 group-hover:text-primary-foreground',
+            'text-primary-foreground',
           )}
           strokeWidth={anyChildActive ? 2.4 : 2}
         />
@@ -198,9 +196,8 @@ function SidebarNavGroup({
         </span>
         <ChevronDown
           className={cn(
-            'size-4 shrink-0 transition-transform duration-200',
+            'size-4 shrink-0 transition-transform duration-200 text-primary-foreground',
             open && 'rotate-180',
-            anyChildActive || open ? 'text-primary-foreground/80' : 'text-primary-foreground/40',
           )}
           strokeWidth={2}
         />
