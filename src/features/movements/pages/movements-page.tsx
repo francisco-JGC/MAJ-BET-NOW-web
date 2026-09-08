@@ -162,7 +162,6 @@ export function MovementsPage() {
   const total = data?.total ?? 0;
 
   const { data: salePoints } = useSalePoints();
-  const { data: usersPage } = useUsers({ limit: 200, offset: 0 });
   const { data: sellersPage } = useUsers({ role: UserRole.SELLER, limit: 200, offset: 0 });
 
   const sellerOptions = useMemo(() => {
@@ -179,11 +178,6 @@ export function MovementsPage() {
     for (const sp of salePoints ?? []) m.set(sp.id, sp);
     return m;
   }, [salePoints]);
-  const userById = useMemo(() => {
-    const m = new Map<string, User>();
-    for (const u of usersPage?.items ?? []) m.set(u.id, u);
-    return m;
-  }, [usersPage]);
 
   const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
@@ -340,15 +334,11 @@ export function MovementsPage() {
                     movement={m}
                     destinationName={
                       m.sellerId
-                        ? userById.get(m.sellerId)?.name ?? '—'
+                        ? (m.sellerName ?? '—')
                         : salePointById.get(m.salePointId ?? '')?.name ?? '—'
                     }
                     destinationKind={m.sellerId ? 'seller' : 'branch'}
-                    createdByName={
-                      m.createdById
-                        ? userById.get(m.createdById)?.name ?? '—'
-                        : '—'
-                    }
+                    createdByName={m.createdByName ?? '—'}
                     onEdit={() => setEditMovement(m)}
                     onDelete={() => deleteMovement.mutate(m.id)}
                     deleting={

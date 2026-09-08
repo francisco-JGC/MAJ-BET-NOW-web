@@ -13,12 +13,14 @@ export interface Movement {
   id: string;
   salePointId: string | null;
   sellerId: string | null;
+  sellerName: string | null;
   isPrizePayment: boolean;
   type: MovementType;
   amount: number;
   description: string;
   occurredAt: string;
   createdById: string | null;
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
 }
