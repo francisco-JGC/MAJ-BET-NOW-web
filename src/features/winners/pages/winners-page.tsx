@@ -20,10 +20,8 @@ import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
 import { Select } from '@/shared/ui/select';
 
 import type { Game } from '@/features/games/types';
-import type { SalePoint } from '@/features/sale-points/types';
 import type { Ticket } from '@/features/tickets/types';
 import { UserRole } from '@/features/users/types';
-import type { User } from '@/features/users/types';
 import type { WinningTicket } from '@/features/winners/types';
 
 function isoDate(d: Date): string {
@@ -83,17 +81,6 @@ export function WinnersPage() {
     for (const g of games ?? []) m.set(g.id, g);
     return m;
   }, [games]);
-  const salePointById = useMemo(() => {
-    const m = new Map<string, SalePoint>();
-    for (const sp of salePoints ?? []) m.set(sp.id, sp);
-    return m;
-  }, [salePoints]);
-  const userById = useMemo(() => {
-    const m = new Map<string, User>();
-    for (const u of sellersPage?.items ?? []) m.set(u.id, u);
-    return m;
-  }, [sellersPage]);
-
   const sellerOptions = useMemo(() => {
     const all = sellersPage?.items ?? [];
     const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
