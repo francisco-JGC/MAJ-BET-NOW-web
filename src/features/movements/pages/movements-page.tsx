@@ -35,7 +35,6 @@ import { TableLoadingOverlay } from '@/shared/ui/table-loading-overlay';
 
 import type { Movement } from '@/features/movements/types';
 import type { SalePoint } from '@/features/sale-points/types';
-import type { User } from '@/features/users/types';
 
 const PAGE_SIZE = 20;
 
