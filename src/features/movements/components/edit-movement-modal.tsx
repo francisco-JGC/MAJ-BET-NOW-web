@@ -53,8 +53,11 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
   };
 
   const parsedAmount = parseInt(form.amount, 10);
+  const isAdjustment = form.type === MovementType.ADJUSTMENT;
   const amountValid =
-    form.amount !== '' && Number.isInteger(parsedAmount) && parsedAmount >= 0;
+    form.amount !== '' &&
+    Number.isInteger(parsedAmount) &&
+    (isAdjustment || parsedAmount >= 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +120,11 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
 
         <Field
           label="Monto"
-          hint="En córdobas — sin signo"
+          hint={
+            isAdjustment
+              ? 'En córdobas — negativo resta del restante, positivo suma'
+              : 'En córdobas'
+          }
           required
         >
           <div className="relative">
@@ -127,10 +134,10 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
             <input
               type="number"
               inputMode="numeric"
-              min={0}
+              min={isAdjustment ? undefined : 0}
               value={form.amount}
               onChange={(e) => set('amount', e.target.value)}
-              placeholder="0"
+              placeholder={isAdjustment ? 'ej. -500 o 200' : '0'}
               className={cn(inputClass, 'pl-9 tabular-nums')}
               autoFocus
             />

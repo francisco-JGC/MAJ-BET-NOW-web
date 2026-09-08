@@ -333,6 +333,7 @@ function BranchSummaryCard({
     let deposits = 0;
     let withdrawals = 0;
     let expenses = 0;
+    let adjustments = 0;
     let partnerSalary = 0;
     let net = 0;
     for (const r of rows) {
@@ -341,6 +342,7 @@ function BranchSummaryCard({
       deposits += r.deposits;
       withdrawals += r.withdrawals;
       expenses += r.expenses;
+      adjustments += r.adjustments;
       partnerSalary += r.partnerSalary ?? 0;
       net += r.net;
     }
@@ -350,6 +352,7 @@ function BranchSummaryCard({
       deposits,
       withdrawals,
       expenses,
+      adjustments,
       partnerSalary,
       net,
     };
@@ -399,6 +402,12 @@ function BranchSummaryCard({
           label="Gastos"
           value={totals.expenses}
           tone="rose"
+        />
+        <Stat
+          label="Ajustes"
+          value={totals.adjustments}
+          tone={totals.adjustments >= 0 ? 'emerald' : 'rose'}
+          hint="Correcciones manuales"
           className={showSalary ? undefined : 'col-span-2'}
         />
         {showSalary && (
@@ -406,6 +415,7 @@ function BranchSummaryCard({
             label="Salarios encargados"
             value={totals.partnerSalary}
             tone="indigo"
+            className="col-span-2"
           />
         )}
       </dl>
@@ -485,6 +495,12 @@ function BranchCard({
           label="Gastos"
           value={row.expenses}
           tone="rose"
+        />
+        <Stat
+          label="Ajustes"
+          value={row.adjustments}
+          tone={row.adjustments >= 0 ? 'emerald' : 'rose'}
+          hint="Correcciones manuales"
           className={showManagerSalary ? undefined : 'col-span-2'}
         />
         {showManagerSalary && (
@@ -492,6 +508,7 @@ function BranchCard({
             label={`Salario encargado (${row.partnerPaymentPercentage}%)`}
             value={row.partnerSalary ?? 0}
             tone="indigo"
+            className="col-span-2"
             hint={
               row.ownerPartnerName
                 ? `Para ${row.ownerPartnerName}`
