@@ -26,21 +26,23 @@ import { UserRole } from '@/features/users/types';
 export function SellerQuotasSection({
   salePoint,
   gameId: gameIdFilter,
+  sellerId: sellerIdFilter,
 }: {
   salePoint: SalePoint;
   gameId?: string;
+  sellerId?: string;
 }) {
   const { data: games } = useGames();
   const {
     data: sucursalLimits,
     isLoading: loadingLimits,
     error: errorLimits,
-  } = useSaleLimitsByNumber(salePoint.id);
+  } = useSaleLimitsByNumber(salePoint.id, gameIdFilter);
   const {
     data: quotas,
     isLoading: loadingQuotas,
     error: errorQuotas,
-  } = useSaleLimitsBySellerNumber(salePoint.id);
+  } = useSaleLimitsBySellerNumber(salePoint.id, gameIdFilter);
   const { data: sellersPage, isLoading: loadingSellers } = useUsers({
     role: UserRole.SELLER,
     limit: 500,
@@ -51,13 +53,13 @@ export function SellerQuotasSection({
     () => new Map((games ?? []).map((g) => [g.id, g])),
     [games],
   );
-  const sellers = useMemo(
-    () =>
-      (sellersPage?.items ?? []).filter(
-        (u) => u.isActive && u.salePointId === salePoint.id,
-      ),
-    [sellersPage, salePoint.id],
-  );
+  const sellers = useMemo(() => {
+    const all = (sellersPage?.items ?? []).filter(
+      (u) => u.isActive && u.salePointId === salePoint.id,
+    );
+    if (sellerIdFilter) return all.filter((u) => u.id === sellerIdFilter);
+    return all;
+  }, [sellersPage, salePoint.id, sellerIdFilter]);
 
   // O(Q) build — lookup is O(1) per limit instead of O(Q) linear scan.
   const quotasByKey = useMemo(() => {
@@ -131,7 +133,9 @@ export function SellerQuotasSection({
         </div>
       ) : sellers.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-muted-foreground">
-          No hay vendedores activos en esta sucursal.
+          {sellerIdFilter
+            ? 'El vendedor seleccionado no está activo en esta sucursal.'
+            : 'No hay vendedores activos en esta sucursal.'}
         </div>
       ) : (
         <ul className="divide-y divide-border/60">
