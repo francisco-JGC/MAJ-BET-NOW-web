@@ -98,6 +98,13 @@ const WinnersPage = lazy(() =>
     default: m.WinnersPage,
   })),
 );
+const SellerQuotasPage = lazy(() =>
+  import(
+    '@/features/sale-limits-by-seller-number/pages/seller-quotas-page'
+  ).then((m) => ({
+    default: m.SellerQuotasPage,
+  })),
+);
 
 function RouteFallback() {
   return (
@@ -199,6 +206,7 @@ const router = createBrowserRouter([
               { path: APP_ROUTES.users, element: <UsersPage /> },
               { path: APP_ROUTES.sucursales, element: <SucursalesPage /> },
               { path: APP_ROUTES.sucursalConfig, element: <SucursalConfigPage /> },
+              { path: APP_ROUTES.sellerQuotas, element: <SellerQuotasPage /> },
               { path: APP_ROUTES.latestResults, element: <LatestResultsPage /> },
               // Rutas admin-only. Un partner que pega estas URLs cae a
               // home — mismo criterio que el sidebar-nav, que también

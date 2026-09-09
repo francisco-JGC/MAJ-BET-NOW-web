@@ -23,7 +23,13 @@ import { UserRole } from '@/features/users/types';
  * tope base en "Límites por número" — sin ese tope no hay techo bajo el
  * cual repartir.
  */
-export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
+export function SellerQuotasSection({
+  salePoint,
+  gameId: gameIdFilter,
+}: {
+  salePoint: SalePoint;
+  gameId?: string;
+}) {
   const { data: games } = useGames();
   const {
     data: sucursalLimits,
@@ -72,7 +78,9 @@ export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
   // sucursal — sin tope no hay nada que repartir.
   const groups = useMemo(() => {
     const limits = (sucursalLimits ?? []).filter(
-      (l) => l.salePointId === salePoint.id,
+      (l) =>
+        l.salePointId === salePoint.id &&
+        (!gameIdFilter || l.gameId === gameIdFilter),
     );
     return limits
       .map((l) => ({
@@ -87,7 +95,7 @@ export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
           ? a.label.localeCompare(b.label)
           : a.gameName.localeCompare(b.gameName),
       );
-  }, [sucursalLimits, quotasByKey, salePoint.id, gameById]);
+  }, [sucursalLimits, quotasByKey, salePoint.id, gameById, gameIdFilter]);
 
   return (
     <section className="rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -117,8 +125,8 @@ export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
       ) : groups.length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-muted-foreground">
           Todavía no hay topes por número en esta sucursal. Configuralos
-          primero en la sección{' '}
-          <span className="font-semibold">"Límites por número"</span> para
+          primero en la página{' '}
+          <span className="font-semibold">"Montos Máximos"</span> para
           poder repartirlos entre vendedores.
         </div>
       ) : sellers.length === 0 ? (

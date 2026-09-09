@@ -20,6 +20,7 @@ export const APP_ROUTES = {
   users: '/usuarios',
   sucursales: '/sucursales',
   sucursalConfig: '/sucursales/:id/configuracion',
+  sellerQuotas: '/cuotas-vendedor',
   draws: '/sorteos',
   latestResults: '/ultimos-resultados',
   systemConfig: '/configuracion-sistema',

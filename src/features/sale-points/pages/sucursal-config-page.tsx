@@ -2,11 +2,9 @@ import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Coins,
-  Hash,
   Loader2,
   MapPin,
   ShieldAlert,
-  Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -17,8 +15,6 @@ import { useEffectiveGamePrizes } from '@/features/game-prizes/hooks/use-game-pr
 import { useGames } from '@/features/games/hooks/use-games';
 import { LimitRow } from '@/features/sale-limits/components/limit-row';
 import { useSaleLimits } from '@/features/sale-limits/hooks/use-sale-limits';
-import { LimitsByNumberSection } from '@/features/sale-limits-by-number/components/limits-by-number-section';
-import { SellerQuotasSection } from '@/features/sale-limits-by-seller-number/components/seller-quotas-section';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { APP_ROUTES } from '@/shared/constants/routes';
 import { cn } from '@/shared/lib/cn';
@@ -51,19 +47,6 @@ const SECTIONS: readonly SectionDef[] = [
     icon: ShieldAlert,
   },
   {
-    key: 'sale-limits-by-number',
-    label: 'Límites por número',
-    description: 'Tope específico para un número puntual (prevalece)',
-    icon: Hash,
-  },
-  {
-    key: 'seller-quotas',
-    label: 'Cuotas por vendedor',
-    description: 'Reparte el tope por número entre los vendedores',
-    icon: Users,
-    roles: [UserRole.ADMIN, UserRole.PARTNER],
-  },
-  {
     key: 'game-prizes',
     label: 'Premios por juego',
     description: 'Multiplicador de pago por juego',
@@ -77,8 +60,6 @@ export function SucursalConfigPage() {
   const session = useSession();
   const role = session?.user.role;
 
-  // Filtro las secciones por rol. Admin ve todas; partner solo la sección
-  // de cuotas por vendedor (repartir el tope entre sus sellers).
   const visibleSections = useMemo(
     () =>
       SECTIONS.filter((s) => {
@@ -91,10 +72,12 @@ export function SucursalConfigPage() {
 
   const { data: salePoints, isLoading } = useSalePoints();
 
-  // Rol no autorizado (seller) → fuera. Partners caen a las secciones
-  // que su rol permita (por ahora solo "seller-quotas").
+  // Solo admins tienen secciones aquí; partners y sellers redirigen fuera.
   if (role === UserRole.SELLER) {
     return <Navigate to={APP_ROUTES.sucursales} replace />;
+  }
+  if (role === UserRole.PARTNER) {
+    return <Navigate to={APP_ROUTES.sellerQuotas} replace />;
   }
   const salePoint = useMemo(
     () => (salePoints ?? []).find((sp) => sp.id === id) ?? null,
@@ -173,13 +156,7 @@ export function SucursalConfigPage() {
           {effectiveSection === 'sale-limits' && (
             <SaleLimitsSection salePoint={salePoint} />
           )}
-          {effectiveSection === 'sale-limits-by-number' && (
-            <LimitsByNumberSection salePoint={salePoint} />
-          )}
-          {effectiveSection === 'seller-quotas' && (
-            <SellerQuotasSection salePoint={salePoint} />
-          )}
-          {effectiveSection === 'game-prizes' && (
+{effectiveSection === 'game-prizes' && (
             <GamePrizesSection salePoint={salePoint} />
           )}
         </div>
