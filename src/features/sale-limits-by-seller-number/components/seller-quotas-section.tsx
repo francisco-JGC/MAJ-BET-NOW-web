@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Loader2, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Trash2 } from 'lucide-react';
 
 import { useGames } from '@/features/games/hooks/use-games';
 import { useSaleLimitsByNumber } from '@/features/sale-limits-by-number/hooks/use-sale-limits-by-number';
@@ -35,10 +35,6 @@ export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
     isLoading: loadingQuotas,
     error: errorQuotas,
   } = useSaleLimitsBySellerNumber(salePoint.id);
-  // `useUsers` no acepta filtro por sucursal en su params — traemos todos
-  // los sellers y filtramos localmente por `salePointId`. El backend ya
-  // aplica el partner scope, así que un partner solo verá sellers de sus
-  // sucursales accesibles.
   const { data: sellersPage, isLoading: loadingSellers } = useUsers({
     role: UserRole.SELLER,
     limit: 500,
@@ -57,35 +53,41 @@ export function SellerQuotasSection({ salePoint }: { salePoint: SalePoint }) {
     [sellersPage, salePoint.id],
   );
 
+  // O(Q) build — lookup is O(1) per limit instead of O(Q) linear scan.
+  const quotasByKey = useMemo(() => {
+    const m = new Map<string, SaleLimitBySellerNumber[]>();
+    for (const q of quotas ?? []) {
+      const k = `${q.gameId}::${q.label}`;
+      const arr = m.get(k);
+      if (arr) arr.push(q);
+      else m.set(k, [q]);
+    }
+    return m;
+  }, [quotas]);
+
   const isLoading = loadingLimits || loadingQuotas || loadingSellers;
   const error = errorLimits ?? errorQuotas;
 
   // Solo mostramos grupos para (game, label) que YA tienen un tope de
-  // sucursal — sin tope no hay nada que repartir (el partner ni lo puede
-  // guardar, el backend lo rechaza).
+  // sucursal — sin tope no hay nada que repartir.
   const groups = useMemo(() => {
-    const limits = sucursalLimits ?? [];
+    const limits = (sucursalLimits ?? []).filter(
+      (l) => l.salePointId === salePoint.id,
+    );
     return limits
-      .filter((l) => l.salePointId === salePoint.id)
-      .map((l) => {
-        const gameName = gameById.get(l.gameId)?.name ?? '—';
-        const groupQuotas = (quotas ?? []).filter(
-          (q) => q.gameId === l.gameId && q.label === l.label,
-        );
-        return {
-          gameId: l.gameId,
-          gameName,
-          label: l.label,
-          sucursalCap: l.amount,
-          quotas: groupQuotas,
-        };
-      })
+      .map((l) => ({
+        gameId: l.gameId,
+        gameName: gameById.get(l.gameId)?.name ?? '—',
+        label: l.label,
+        sucursalCap: l.amount,
+        quotas: quotasByKey.get(`${l.gameId}::${l.label}`) ?? [],
+      }))
       .sort((a, b) =>
         a.gameName === b.gameName
           ? a.label.localeCompare(b.label)
           : a.gameName.localeCompare(b.gameName),
       );
-  }, [sucursalLimits, quotas, salePoint.id, gameById]);
+  }, [sucursalLimits, quotasByKey, salePoint.id, gameById]);
 
   return (
     <section className="rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -162,6 +164,10 @@ function GroupBlock({
   quotas,
   sellers,
 }: GroupBlockProps) {
+  // Collapsed by default — with hundreds of groups, mounting every seller row
+  // at once tanks rendering. The user expands the one they want to edit.
+  const [open, setOpen] = useState(false);
+
   const totalAssigned = useMemo(
     () => quotas.reduce((acc, q) => acc + q.amount, 0),
     [quotas],
@@ -175,8 +181,13 @@ function GroupBlock({
   );
 
   return (
-    <li className="px-6 py-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
+    <li className="px-6 py-3">
+      {/* Clickable header — always rendered, seller rows only when open */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
+      >
         <div>
           <div className="text-sm font-bold text-foreground">
             {gameName} · Número{' '}
@@ -197,30 +208,42 @@ function GroupBlock({
             label="Pool sobrante"
             value={formatCurrency(remaining)}
           />
-        </div>
-      </header>
-
-      {overCap && (
-        <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-          La suma de cuotas supera el tope de sucursal. Ajustá o eliminá
-          alguna para volver dentro del límite.
-        </div>
-      )}
-
-      <ul className="mt-3 divide-y divide-border/60 rounded-lg border border-border">
-        {sellers.map((s) => (
-          <SellerQuotaRow
-            key={s.id}
-            salePointId={salePointId}
-            gameId={gameId}
-            label={label}
-            sucursalCap={sucursalCap}
-            sumOthers={totalAssigned - (quotaBySeller.get(s.id)?.amount ?? 0)}
-            seller={s}
-            existing={quotaBySeller.get(s.id)}
+          <ChevronDown
+            className={cn(
+              'size-4 text-muted-foreground transition-transform',
+              open && 'rotate-180',
+            )}
           />
-        ))}
-      </ul>
+        </div>
+      </button>
+
+      {open && (
+        <>
+          {overCap && (
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              La suma de cuotas supera el tope de sucursal. Ajustá o eliminá
+              alguna para volver dentro del límite.
+            </div>
+          )}
+
+          <ul className="mt-3 divide-y divide-border/60 rounded-lg border border-border">
+            {sellers.map((s) => (
+              <SellerQuotaRow
+                key={s.id}
+                salePointId={salePointId}
+                gameId={gameId}
+                label={label}
+                sucursalCap={sucursalCap}
+                sumOthers={
+                  totalAssigned - (quotaBySeller.get(s.id)?.amount ?? 0)
+                }
+                seller={s}
+                existing={quotaBySeller.get(s.id)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </li>
   );
 }

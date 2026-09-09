@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Loader2, Plus, Trash2 } from 'lucide-react';
 
 import { useGames } from '@/features/games/hooks/use-games';
 import {
@@ -16,6 +16,9 @@ import type { SalePoint } from '@/features/sale-points/types';
  * Sección de "Límites por número". Convive con el "Límite general" del
  * mismo (juego, sucursal) — cuando existe un tope específico acá, el
  * backend lo prioriza sobre el general.
+ *
+ * Los límites se agrupan por juego con secciones colapsables para evitar
+ * montar cientos de filas DOM cuando "a todos los números" está activo.
  */
 export function LimitsByNumberSection({
   salePoint,
@@ -33,6 +36,24 @@ export function LimitsByNumberSection({
     () => new Map((games ?? []).map((g) => [g.id, g])),
     [games],
   );
+
+  // Group limits by game — O(N) single pass.
+  const byGame = useMemo(() => {
+    const map = new Map<string, { id: string; gameId: string; label: string; amount: number }[]>();
+    for (const l of limits ?? []) {
+      const arr = map.get(l.gameId);
+      if (arr) arr.push(l);
+      else map.set(l.gameId, [l]);
+    }
+    // Sort entries by game name
+    return [...map.entries()]
+      .map(([gameId, rows]) => ({
+        gameId,
+        gameName: gameById.get(gameId)?.name ?? '—',
+        rows: rows.slice().sort((a, b) => a.label.localeCompare(b.label)),
+      }))
+      .sort((a, b) => a.gameName.localeCompare(b.gameName));
+  }, [limits, gameById]);
 
   return (
     <section className="rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
@@ -62,23 +83,71 @@ export function LimitsByNumberSection({
         <div className="py-8 text-center text-sm text-muted-foreground">
           <Loader2 className="mx-auto size-5 animate-spin" />
         </div>
-      ) : (limits ?? []).length === 0 ? (
+      ) : byGame.length === 0 ? (
         <div className="px-6 py-8 text-center text-sm text-muted-foreground">
           Aún no hay topes específicos configurados en esta sucursal.
         </div>
       ) : (
         <ul className="divide-y divide-border/60">
-          {(limits ?? []).map((limit) => (
-            <LimitRow
-              key={limit.id}
-              limit={limit}
-              gameName={gameById.get(limit.gameId)?.name ?? '—'}
+          {byGame.map((group) => (
+            <GameGroup
+              key={group.gameId}
+              gameName={group.gameName}
+              rows={group.rows}
               salePointId={salePoint.id}
             />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+/** Collapsible group of limits for one game. */
+function GameGroup({
+  gameName,
+  rows,
+  salePointId,
+}: {
+  gameName: string;
+  rows: { id: string; gameId: string; label: string; amount: number }[];
+  salePointId: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-6 py-3 text-left hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-foreground">{gameName}</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+            {rows.length} {rows.length === 1 ? 'número' : 'números'}
+          </span>
+        </div>
+        <ChevronDown
+          className={cn(
+            'size-4 text-muted-foreground transition-transform',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+
+      {open && (
+        <ul className="divide-y divide-border/40 border-t border-border/40">
+          {rows.map((limit) => (
+            <LimitRow
+              key={limit.id}
+              limit={limit}
+              salePointId={salePointId}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 
@@ -188,7 +257,6 @@ function AddLimitForm({
 
 function LimitRow({
   limit,
-  gameName,
   salePointId,
 }: {
   limit: {
@@ -197,7 +265,6 @@ function LimitRow({
     label: string;
     amount: number;
   };
-  gameName: string;
   salePointId: string;
 }) {
   const remove = useDeleteSaleLimitByNumber(salePointId);
@@ -206,9 +273,6 @@ function LimitRow({
   return (
     <li className="flex items-center gap-4 px-6 py-3">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold text-foreground">
-          {gameName}
-        </div>
         <div className="text-xs text-muted-foreground">
           Número{' '}
           <span className="font-mono font-bold text-foreground">
