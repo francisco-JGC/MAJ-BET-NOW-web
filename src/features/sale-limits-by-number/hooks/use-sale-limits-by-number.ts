@@ -16,16 +16,16 @@ import type { ApiError } from '@/shared/types/api';
 
 export const saleLimitsByNumberKeys = {
   all: ['sale-limits-by-number'] as const,
-  list: (salePointId: string) =>
-    [...saleLimitsByNumberKeys.all, 'list', salePointId] as const,
+  list: (salePointId: string, gameId?: string) =>
+    [...saleLimitsByNumberKeys.all, 'list', salePointId, gameId ?? ''] as const,
 };
 
-export function useSaleLimitsByNumber(salePointId: string | null) {
+export function useSaleLimitsByNumber(salePointId: string | null, gameId?: string) {
   return useQuery<SaleLimitByNumber[], ApiError>({
-    queryKey: saleLimitsByNumberKeys.list(salePointId ?? ''),
+    queryKey: saleLimitsByNumberKeys.list(salePointId ?? '', gameId),
     queryFn: async () => {
       try {
-        return await listSaleLimitsByNumber(salePointId!);
+        return await listSaleLimitsByNumber(salePointId!, gameId);
       } catch (error) {
         throw toApiError(error);
       }

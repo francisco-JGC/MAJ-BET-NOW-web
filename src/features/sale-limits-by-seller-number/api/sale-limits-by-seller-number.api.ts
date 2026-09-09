@@ -7,10 +7,11 @@ import type {
 
 export async function listSaleLimitsBySellerNumber(
   salePointId: string,
+  gameId?: string,
 ): Promise<SaleLimitBySellerNumber[]> {
   const { data } = await http.get<SaleLimitBySellerNumber[]>(
     '/sale-limits-by-seller-number',
-    { params: { salePointId } },
+    { params: { salePointId, ...(gameId ? { gameId } : {}) } },
   );
   return data;
 }
