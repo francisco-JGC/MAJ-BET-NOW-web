@@ -337,14 +337,14 @@ function BranchSummaryCard({
     let partnerSalary = 0;
     let net = 0;
     for (const r of rows) {
-      billed += r.billed;
-      wonPrize += r.wonPrize;
-      deposits += r.deposits;
-      withdrawals += r.withdrawals;
-      expenses += r.expenses;
-      adjustments += r.adjustments;
+      billed += r.billed ?? 0;
+      wonPrize += r.wonPrize ?? 0;
+      deposits += r.deposits ?? 0;
+      withdrawals += r.withdrawals ?? 0;
+      expenses += r.expenses ?? 0;
+      adjustments += r.adjustments ?? 0;
       partnerSalary += r.partnerSalary ?? 0;
-      net += r.net;
+      net += r.net ?? 0;
     }
     return {
       billed,
@@ -406,7 +406,7 @@ function BranchSummaryCard({
         <Stat
           label="Ajustes"
           value={totals.adjustments}
-          tone={totals.adjustments >= 0 ? 'emerald' : 'rose'}
+          tone={(totals.adjustments ?? 0) >= 0 ? 'emerald' : 'rose'}
           hint="Correcciones manuales"
           className={showSalary ? undefined : 'col-span-2'}
         />
@@ -435,8 +435,8 @@ function BranchCard({
   // restante — el backend siempre lo mete en `row.net`, así que sumamos
   // de vuelta cuando el toggle está en OFF.
   const effectiveNet = showSalary
-    ? row.net
-    : row.net + (row.partnerSalary ?? 0);
+    ? (row.net ?? 0)
+    : (row.net ?? 0) + (row.partnerSalary ?? 0);
   const isPositive = effectiveNet >= 0;
   // Sólo mostramos salario del encargado si hay % configurado en la
   // sucursal — sin % no cobra (mismo criterio que el SellerCard).
@@ -483,23 +483,23 @@ function BranchCard({
       <NetBanner value={effectiveNet} />
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <Stat label="Facturado" value={row.billed} tone="emerald" />
+        <Stat label="Facturado" value={row.billed ?? 0} tone="emerald" />
         <Stat
           label="Premios ganados"
-          value={row.wonPrize}
+          value={row.wonPrize ?? 0}
           tone="rose"
         />
-        <Stat label="Depósitos" value={row.deposits} tone="emerald" />
-        <Stat label="Retiros" value={row.withdrawals} tone="rose" />
+        <Stat label="Depósitos" value={row.deposits ?? 0} tone="emerald" />
+        <Stat label="Retiros" value={row.withdrawals ?? 0} tone="rose" />
         <Stat
           label="Gastos"
-          value={row.expenses}
+          value={row.expenses ?? 0}
           tone="rose"
         />
         <Stat
           label="Ajustes"
-          value={row.adjustments}
-          tone={row.adjustments >= 0 ? 'emerald' : 'rose'}
+          value={row.adjustments ?? 0}
+          tone={(row.adjustments ?? 0) >= 0 ? 'emerald' : 'rose'}
           hint="Correcciones manuales"
           className={showManagerSalary ? undefined : 'col-span-2'}
         />
