@@ -85,26 +85,19 @@ export function BranchFlowPage() {
     [sellersPage, salePointId],
   );
 
-  // Query only when sucursal is selected; juego es opcional
   const params = useMemo(
-    () =>
-      salePointId
-        ? {
-            salePointId,
-            gameId: gameId || undefined,
-            sellerId: sellerId || undefined,
-            from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
-            to: to ? endOfDayParam(to) : undefined,
-            drawTime: drawTime || undefined,
-          }
-        : null,
+    () => ({
+      salePointId: salePointId || undefined,
+      gameId: gameId || undefined,
+      sellerId: sellerId || undefined,
+      from: from ? `${from}T00:00:00${MANAGUA_OFFSET}` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
+      drawTime: drawTime || undefined,
+    }),
     [salePointId, gameId, sellerId, from, to, drawTime],
   );
 
-  const { data, isLoading, isFetching, error } = useSalesByNumber(
-    params ?? {},
-    { enabled: !!params },
-  );
+  const { data, isLoading, isFetching, error } = useSalesByNumber(params);
 
   // Sort by label ascending (backend returns by total_amount DESC)
   const items = useMemo(() => {
@@ -130,7 +123,7 @@ export function BranchFlowPage() {
     setTo(val);
   }
 
-  const ready = Boolean(salePointId);
+  const ready = true;
 
   return (
     <div className="space-y-6">
@@ -148,16 +141,16 @@ export function BranchFlowPage() {
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {/* Fila 1: Sucursal, Desde, Hasta */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Sucursal" required>
+          <Field label="Sucursal">
             <Select
               value={salePointId}
-              onChange={setSalePointId}
+              onChange={(v) => { setSalePointId(v); setSellerId(''); }}
               leadingIcon={<MapPin className="size-4" />}
-              placeholder="Selecciona una sucursal"
-              options={
-                salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ??
-                []
-              }
+              placeholder="Todas las sucursales"
+              options={[
+                { value: '', label: 'Todas las sucursales' },
+                ...(salePoints?.map((sp) => ({ value: sp.id, label: sp.name })) ?? []),
+              ]}
             />
           </Field>
           <Field label="Desde">
@@ -214,23 +207,15 @@ export function BranchFlowPage() {
               value={sellerId}
               onChange={setSellerId}
               leadingIcon={<UserIcon className="size-4" />}
-              placeholder={salePointId ? 'Todos los vendedores' : 'Selecciona una sucursal primero'}
-              options={sellers.map((u) => ({ value: u.id, label: u.name }))}
-              disabled={!salePointId}
+              placeholder="Todos los vendedores"
+              options={[
+                { value: '', label: 'Todos los vendedores' },
+                ...sellers.map((u) => ({ value: u.id, label: u.name })),
+              ]}
             />
           </Field>
         </div>
       </div>
-
-      {/* Estado vacío — esperando selección */}
-      {!ready && (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-14 text-center">
-          <Dices className="mx-auto size-8 text-muted-foreground/40" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Selecciona una sucursal para ver la sumatoria.
-          </p>
-        </div>
-      )}
 
       {/* Error */}
       {ready && error && (
