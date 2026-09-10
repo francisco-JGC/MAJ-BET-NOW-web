@@ -80,7 +80,7 @@ export function BranchFlowPage() {
   const sellers = useMemo(
     () =>
       (sellersPage?.items ?? []).filter(
-        (u) => !salePointId || u.salePointId === salePointId,
+        (u) => u.isActive && (!salePointId || u.salePointId === salePointId),
       ),
     [sellersPage, salePointId],
   );

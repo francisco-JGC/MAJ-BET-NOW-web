@@ -187,10 +187,10 @@ export function CreateMovementModal({
             }
             disabled={loadingSellers}
             options={
-              sellersData?.items.map((u) => ({
+              (sellersData?.items ?? []).filter((u) => u.isActive).map((u) => ({
                 value: u.id,
                 label: u.name,
-              })) ?? []
+              }))
             }
           />
         </Field>

@@ -94,11 +94,11 @@ export function SalePointDetailsModal({ open, onClose, salePoint }: Props) {
 
   const sellers = sellersPage?.items ?? [];
   const assigned = useMemo(
-    () => sellers.filter((s) => s.salePointId === salePoint?.id),
+    () => sellers.filter((s) => s.isActive && s.salePointId === salePoint?.id),
     [sellers, salePoint?.id],
   );
   const available = useMemo(
-    () => sellers.filter((s) => s.salePointId === null),
+    () => sellers.filter((s) => s.isActive && s.salePointId === null),
     [sellers],
   );
 

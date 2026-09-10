@@ -165,7 +165,7 @@ export function MovementsPage() {
 
   const sellerOptions = useMemo(() => {
     const all = sellersPage?.items ?? [];
-    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
+    const filtered = salePointId ? all.filter((u) => u.isActive && u.salePointId === salePointId) : all.filter((u) => u.isActive);
     return [
       { value: '', label: 'Todos los vendedores' },
       ...filtered.map((u) => ({ value: u.id, label: u.name })),
