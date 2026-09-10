@@ -23,13 +23,6 @@ import type { DrawSchedule } from '@/features/games/types';
 const MANAGUA_OFFSET = '-06:00';
 
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 /**
  * Devuelve los horarios únicos del juego (e.g. "11:00", "15:00", "18:00",
  * "21:00"). No depende del rango de fechas — el filtro de fecha ya acota
@@ -244,6 +237,7 @@ export function BranchFlowPage() {
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Número de Apuesta</th>
+                  <th className="px-4 py-3">Sucursal</th>
                   <th className="px-4 py-3 text-right">Total Vendido</th>
                 </tr>
               </thead>
@@ -255,7 +249,7 @@ export function BranchFlowPage() {
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={2}
+                      colSpan={3}
                       className="px-4 py-14 text-center text-sm text-muted-foreground"
                     >
                       Sin ventas en el rango seleccionado.
@@ -263,9 +257,12 @@ export function BranchFlowPage() {
                   </tr>
                 ) : (
                   items.map((row) => (
-                    <tr key={`${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
+                    <tr key={`${row.salePointId}-${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
                       <td className="px-4 py-3 font-semibold tabular-nums">
                         {row.label}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {row.salePointName}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-bold text-emerald-700">
                         {formatCurrency(row.totalAmount)}
@@ -277,7 +274,7 @@ export function BranchFlowPage() {
               {items.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-border bg-slate-50/70">
-                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" colSpan={2}>
                       Total ({items.length} número{items.length !== 1 ? 's' : ''})
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-base font-black text-emerald-800">
@@ -299,7 +296,7 @@ export function BranchFlowPage() {
 function SkeletonRow() {
   return (
     <tr>
-      {Array.from({ length: 2 }).map((_, i) => (
+      {Array.from({ length: 3 }).map((_, i) => (
         <td key={i} className="px-4 py-4">
           <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
         </td>

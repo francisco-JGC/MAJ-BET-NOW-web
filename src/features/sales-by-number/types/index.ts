@@ -1,4 +1,6 @@
 export interface SalesByNumberRow {
+  salePointId: string;
+  salePointName: string;
   gameId: string;
   gameName: string;
   /**
