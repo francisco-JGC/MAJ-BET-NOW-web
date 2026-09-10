@@ -15,7 +15,10 @@ export const salesByNumberQueryKeys = {
     [...salesByNumberQueryKeys.all, 'list', params] as const,
 };
 
-export function useSalesByNumber(params: SalesByNumberParams) {
+export function useSalesByNumber(
+  params: SalesByNumberParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery<SalesByNumberResponse, ApiError>({
     queryKey: salesByNumberQueryKeys.list(params),
     queryFn: async () => {
@@ -26,5 +29,6 @@ export function useSalesByNumber(params: SalesByNumberParams) {
       }
     },
     placeholderData: (prev) => prev,
+    enabled: options?.enabled ?? true,
   });
 }

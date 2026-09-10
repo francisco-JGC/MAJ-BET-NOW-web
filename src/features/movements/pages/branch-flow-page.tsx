@@ -59,8 +59,8 @@ export function BranchFlowPage() {
   const [gameId, setGameId] = useState('');
   const [drawTime, setDrawTime] = useState('');
   const [sellerId, setSellerId] = useState('');
-  const [from, setFrom] = useState(isoDate(new Date()));
-  const [to, setTo] = useState(isoDate(new Date()));
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   const { data: salePoints } = useSalePoints();
   const { data: games } = useGames();
@@ -103,6 +103,7 @@ export function BranchFlowPage() {
 
   const { data, isLoading, isFetching, error } = useSalesByNumber(
     params ?? {},
+    { enabled: !!params },
   );
 
   // Sort by label ascending (backend returns by total_amount DESC)

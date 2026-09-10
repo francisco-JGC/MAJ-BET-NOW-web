@@ -510,7 +510,7 @@ function TicketRow({
       <td className="px-6 py-3.5 font-mono text-xs font-semibold text-foreground">
         {ticket.folio}
       </td>
-      <td className="px-6 py-3.5 text-muted-foreground">
+      <td className="px-6 py-3.5 text-foreground">
         {formatManaguaDateTime(ticket.createdAt)}
       </td>
       <td className="px-6 py-3.5 text-foreground">{salePointName}</td>
