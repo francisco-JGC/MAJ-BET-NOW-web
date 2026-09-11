@@ -413,7 +413,7 @@ export function SalesPage() {
                     salePointName={
                       salePointById.get(ticket.salePointId)?.name ?? '—'
                     }
-                    sellerName={userById.get(ticket.sellerId)?.name ?? '—'}
+                    sellerName={ticket.sellerName ?? userById.get(ticket.sellerId)?.name ?? '—'}
                     onClick={() => setSelectedId(ticket.id)}
                   />
                 ))
