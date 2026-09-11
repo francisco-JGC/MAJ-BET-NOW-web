@@ -15,6 +15,7 @@ export async function listUsers(
     params: {
       role: params.role,
       search: params.search || undefined,
+      salePointId: params.salePointId || undefined,
       limit: params.limit,
       offset: params.offset,
     },

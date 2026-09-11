@@ -29,6 +29,7 @@ export interface User {
 export interface ListUsersParams {
   role?: UserRole;
   search?: string;
+  salePointId?: string;
   limit: number;
   offset: number;
 }

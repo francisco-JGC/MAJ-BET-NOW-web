@@ -125,6 +125,7 @@ export function SalesPage() {
   const { data: salePoints } = useSalePoints();
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
+    salePointId: salePointId || undefined,
     limit: 100,
     offset: 0,
   });
@@ -157,12 +158,11 @@ export function SalesPage() {
 
   const sellerOptions = useMemo(() => {
     const all = sellersPage?.items ?? [];
-    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
     return [
       { value: '', label: 'Todos los vendedores' },
-      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+      ...all.map((u) => ({ value: u.id, label: u.name })),
     ];
-  }, [sellersPage, salePointId]);
+  }, [sellersPage]);
 
   // Unique schedule times, sorted ascending. A game can have multiple
   // schedules with the same time (different weekdays) — dedupe them so the
