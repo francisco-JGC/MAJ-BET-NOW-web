@@ -88,6 +88,8 @@ export interface UpdateMovementPayload {
   type?: MovementType;
   amount?: number;
   description?: string;
+  /** ISO 8601. Optional — omit to keep the existing date. */
+  occurredAt?: string;
 }
 
 export interface CreateMovementPayload {

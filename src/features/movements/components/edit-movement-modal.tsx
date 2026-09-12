@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Calendar,
+  Loader2,
+  Save,
+  Wallet,
+} from 'lucide-react';
 
 import { useUpdateMovement } from '@/features/movements/hooks/use-movements';
 import { MovementType } from '@/features/movements/types';
 import { cn } from '@/shared/lib/cn';
 import { Modal } from '@/shared/ui/modal';
-import { Select } from '@/shared/ui/select';
 
 import type { Movement } from '@/features/movements/types';
 
@@ -15,24 +20,56 @@ interface Props {
   movement: Movement | null;
 }
 
-const TYPE_OPTIONS = [
-  { value: MovementType.EXPENSE, label: 'Gasto' },
-  { value: MovementType.DEPOSIT, label: 'Depósito / Cobro' },
-  { value: MovementType.WITHDRAWAL, label: 'Retiro / Crédito' },
-  { value: MovementType.ADJUSTMENT, label: 'Ajuste' },
+interface TypeOption {
+  id: string;
+  type: MovementType;
+  label: string;
+  icon: React.ReactNode;
+  hint: string;
+}
+
+const SELLER_TYPE_OPTIONS: TypeOption[] = [
+  {
+    id: 'cobro',
+    type: MovementType.DEPOSIT,
+    label: 'Cobro',
+    icon: <ArrowUpRight className="size-4 text-emerald-600" />,
+    hint: 'Dinero recibido del vendedor',
+  },
+  {
+    id: 'credito',
+    type: MovementType.WITHDRAWAL,
+    label: 'Ajuste de premio',
+    icon: <Wallet className="size-4 text-blue-600" />,
+    hint: 'Crédito aplicado al vendedor',
+  },
 ];
 
+function optionIdFromType(type: MovementType): string {
+  if (type === MovementType.WITHDRAWAL) return 'credito';
+  return 'cobro';
+}
+
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 interface FormState {
-  type: MovementType;
+  selectedOptionId: string;
   amount: string;
   description: string;
+  occurredDate: string;
 }
 
 export function EditMovementModal({ open, onClose, movement }: Props) {
   const [form, setForm] = useState<FormState>({
-    type: MovementType.DEPOSIT,
+    selectedOptionId: 'cobro',
     amount: '',
     description: '',
+    occurredDate: isoDate(new Date()),
   });
 
   const { mutateAsync, isPending, error, reset } = useUpdateMovement();
@@ -40,9 +77,10 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
   useEffect(() => {
     if (open && movement) {
       setForm({
-        type: movement.type,
+        selectedOptionId: optionIdFromType(movement.type),
         amount: String(movement.amount),
         description: movement.description ?? '',
+        occurredDate: isoDate(new Date(movement.occurredAt)),
       });
       reset();
     }
@@ -52,12 +90,13 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const selectedOption =
+    SELLER_TYPE_OPTIONS.find((o) => o.id === form.selectedOptionId) ??
+    SELLER_TYPE_OPTIONS[0];
+
   const parsedAmount = parseInt(form.amount, 10);
-  const isAdjustment = form.type === MovementType.ADJUSTMENT;
   const amountValid =
-    form.amount !== '' &&
-    Number.isInteger(parsedAmount) &&
-    (isAdjustment || parsedAmount >= 0);
+    form.amount !== '' && Number.isInteger(parsedAmount) && parsedAmount >= 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,9 +104,10 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
     await mutateAsync({
       id: movement.id,
       payload: {
-        type: form.type,
+        type: selectedOption.type,
         amount: parsedAmount,
         description: form.description.trim() || undefined,
+        occurredAt: `${form.occurredDate}T00:00:00-06:00`,
       },
     });
     onClose();
@@ -78,7 +118,7 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
       open={open}
       onClose={onClose}
       title="Editar movimiento"
-      size="max-w-md"
+      size="max-w-xl"
       footer={
         <>
           <button
@@ -111,38 +151,55 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
     >
       <form id="edit-movement-form" onSubmit={handleSubmit} className="space-y-4">
         <Field label="Tipo" required>
-          <Select
-            value={form.type}
-            onChange={(v) => set('type', v as MovementType)}
-            options={TYPE_OPTIONS}
-          />
-        </Field>
-
-        <Field
-          label="Monto"
-          hint={
-            isAdjustment
-              ? 'En córdobas — negativo resta del restante, positivo suma'
-              : 'En córdobas'
-          }
-          required
-        >
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
-              C$
-            </span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={isAdjustment ? undefined : 0}
-              value={form.amount}
-              onChange={(e) => set('amount', e.target.value)}
-              placeholder={isAdjustment ? 'ej. -500 o 200' : '0'}
-              className={cn(inputClass, 'pl-9 tabular-nums')}
-              autoFocus
-            />
+          <div className="grid gap-2 grid-cols-2">
+            {SELLER_TYPE_OPTIONS.map((opt) => (
+              <TypeOptionCard
+                key={opt.id}
+                active={form.selectedOptionId === opt.id}
+                onClick={() => set('selectedOptionId', opt.id)}
+                icon={opt.icon}
+                label={opt.label}
+                hint={opt.hint}
+              />
+            ))}
           </div>
         </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Monto"
+            hint="En córdobas — sin signo, el tipo define si suma o resta"
+            required
+          >
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                C$
+              </span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={form.amount}
+                onChange={(e) => set('amount', e.target.value)}
+                placeholder="0"
+                className={cn(inputClass, 'pl-9 tabular-nums')}
+                autoFocus
+              />
+            </div>
+          </Field>
+
+          <Field label="Fecha" required>
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="date"
+                value={form.occurredDate}
+                onChange={(e) => set('occurredDate', e.target.value)}
+                className={cn(inputClass, 'pl-9')}
+              />
+            </div>
+          </Field>
+        </div>
 
         <Field label="Descripción">
           <input
@@ -150,7 +207,7 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
             maxLength={255}
-            placeholder="ej. Cobro semana 23"
+            placeholder="ej. Cobro semana 23, ajuste por diferencia en caja"
             className={inputClass}
           />
         </Field>
@@ -165,8 +222,41 @@ export function EditMovementModal({ open, onClose, movement }: Props) {
   );
 }
 
+function TypeOptionCard({
+  active,
+  onClick,
+  icon,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left transition',
+        active
+          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+          : 'border-border bg-card hover:bg-secondary/60',
+      )}
+    >
+      <span>{icon}</span>
+      <span className="text-xs font-bold text-foreground">{label}</span>
+      {hint && (
+        <span className="text-[10px] text-muted-foreground leading-tight">{hint}</span>
+      )}
+    </button>
+  );
+}
+
 const inputClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:cursor-not-allowed disabled:opacity-60';
 
 function Field({
   label,
