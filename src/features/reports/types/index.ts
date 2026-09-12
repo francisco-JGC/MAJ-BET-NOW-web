@@ -18,6 +18,9 @@ export interface SellerReportParams {
   /** Multi-sucursal (CSV al backend). */
   salePointIds?: string[];
   sellerId?: string;
+  gameId?: string;
+  /** "HH:MM" wall-clock en zona Managua. */
+  drawTime?: string;
   /** ISO with Managua offset (`-06:00`). Inclusive. */
   from?: string;
   /** ISO with Managua offset. Inclusive. */

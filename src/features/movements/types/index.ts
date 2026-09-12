@@ -59,6 +59,9 @@ export interface MovementsBalanceParams {
   salePointId?: string;
   /** Multi-sucursal (se serializa como CSV al backend). */
   salePointIds?: string[];
+  gameId?: string;
+  /** "HH:MM" wall-clock en zona Managua. */
+  drawTime?: string;
   from?: string;
   to?: string;
 }

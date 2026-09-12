@@ -6,6 +6,8 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Dices,
   Handshake,
   History,
   MapPin,
@@ -22,13 +24,16 @@ import { useMovements } from '@/features/movements/hooks/use-movements';
 import { useMovementsBalance } from '@/features/movements/hooks/use-movements-balance';
 import { useSellerMovementsBalance } from '@/features/movements/hooks/use-seller-movements-balance';
 import { MovementType } from '@/features/movements/types';
+import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
 import { useSellerReport } from '@/features/reports/hooks/use-seller-report';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { cn } from '@/shared/lib/cn';
-import { endOfDayParam, formatCurrency } from '@/shared/lib/format';
+import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
 import { shareCardImage } from '@/shared/lib/share-whatsapp';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { Select } from '@/shared/ui/select';
+
+import type { DrawSchedule } from '@/features/games/types';
 
 import type { Movement, MovementsBalanceRow, SellerMovementsBalanceRow } from '@/features/movements/types';
 import type { SellerReportRow } from '@/features/reports/types';
@@ -38,6 +43,21 @@ function isoDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function generateDrawOptions(
+  schedules: DrawSchedule[],
+): Array<{ value: string; label: string }> {
+  const active = schedules.filter((s) => s.isActive);
+  if (active.length === 0) return [];
+  const seen = new Set<string>();
+  const options: Array<{ value: string; label: string }> = [];
+  for (const s of active) {
+    if (seen.has(s.drawTime)) continue;
+    seen.add(s.drawTime);
+    options.push({ value: s.drawTime, label: formatDrawTimeLabel(s.drawTime) });
+  }
+  return options.sort((a, b) => a.value.localeCompare(b.value));
 }
 
 /**
@@ -58,17 +78,34 @@ export function MovementsBalancePage() {
   // Multi-sucursal. `[]` significa "todas las visibles según partner scope".
   const [salePointIds, setSalePointIds] = useState<string[]>([]);
   const [sellerId, setSellerId] = useState('');
+  const [gameId, setGameId] = useState('');
+  const [drawTime, setDrawTime] = useState('');
   const [from, setFrom] = useState(isoDate(new Date()));
   const [to, setTo] = useState(isoDate(new Date()));
   const [showSalary, setShowSalary] = useState(false);
 
+  const { data: games } = useGames();
+  const { data: schedules } = useGameSchedules(gameId || null);
+
+  const drawOptions = useMemo(
+    () => generateDrawOptions(schedules ?? []),
+    [schedules],
+  );
+
+  function handleGameChange(id: string) {
+    setGameId(id);
+    setDrawTime('');
+  }
+
   const rangeParams = useMemo(
     () => ({
       salePointIds: salePointIds.length > 0 ? salePointIds : undefined,
+      gameId: gameId || undefined,
+      drawTime: drawTime || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
       to: to ? endOfDayParam(to) : undefined,
     }),
-    [salePointIds, from, to],
+    [salePointIds, gameId, drawTime, from, to],
   );
 
   const balanceQuery = useMovementsBalance(rangeParams);
@@ -112,6 +149,12 @@ export function MovementsBalancePage() {
           id: r.sellerId,
           name: r.sellerName,
         }))}
+        gameId={gameId}
+        onGameChange={handleGameChange}
+        games={games ?? []}
+        drawTime={drawTime}
+        onDrawTimeChange={setDrawTime}
+        drawOptions={drawOptions}
         from={from}
         onFromChange={setFrom}
         to={to}
@@ -197,6 +240,12 @@ function FiltersBar({
   sellerId,
   onSellerChange,
   sellers,
+  gameId,
+  onGameChange,
+  games,
+  drawTime,
+  onDrawTimeChange,
+  drawOptions,
   from,
   onFromChange,
   to,
@@ -210,6 +259,12 @@ function FiltersBar({
   sellerId: string;
   onSellerChange: (v: string) => void;
   sellers: { id: string; name: string }[];
+  gameId: string;
+  onGameChange: (v: string) => void;
+  games: { id: string; name: string }[];
+  drawTime: string;
+  onDrawTimeChange: (v: string) => void;
+  drawOptions: { value: string; label: string }[];
   from: string;
   onFromChange: (v: string) => void;
   to: string;
@@ -219,6 +274,7 @@ function FiltersBar({
 }) {
   return (
     <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      {/* Fila 1: Sucursales, Vendedor, Desde, Hasta */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Sucursales">
           <MultiSelect
@@ -250,6 +306,28 @@ function FiltersBar({
         </Field>
         <Field label="Hasta">
           <DateField value={to} min={from} onChange={onToChange} />
+        </Field>
+      </div>
+      {/* Fila 2: Juego y Sorteo */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Juego">
+          <Select
+            value={gameId}
+            onChange={onGameChange}
+            leadingIcon={<Dices className="size-4" />}
+            placeholder="Todos los juegos"
+            options={games.map((g) => ({ value: g.id, label: g.name }))}
+          />
+        </Field>
+        <Field label="Sorteo">
+          <Select
+            value={drawTime}
+            onChange={onDrawTimeChange}
+            leadingIcon={<Clock className="size-4" />}
+            placeholder={gameId ? 'Todos los sorteos' : 'Selecciona un juego primero'}
+            options={drawOptions}
+            disabled={!gameId}
+          />
         </Field>
       </div>
       <label className="flex items-center gap-2 pt-1 text-sm text-foreground">

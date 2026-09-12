@@ -55,6 +55,8 @@ export async function getSellerReport(
             ? params.salePointIds.join(',')
             : undefined,
         sellerId: params.sellerId || undefined,
+        gameId: params.gameId || undefined,
+        drawTime: params.drawTime || undefined,
         from: params.from || undefined,
         to: params.to || undefined,
       },

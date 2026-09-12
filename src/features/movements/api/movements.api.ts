@@ -103,6 +103,8 @@ export async function getMovementsBalance(
           params.salePointIds && params.salePointIds.length > 0
             ? params.salePointIds.join(',')
             : undefined,
+        gameId: params.gameId || undefined,
+        drawTime: params.drawTime || undefined,
         from: params.from || undefined,
         to: params.to || undefined,
       },
