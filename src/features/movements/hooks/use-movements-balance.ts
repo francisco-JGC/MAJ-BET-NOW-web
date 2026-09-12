@@ -18,9 +18,9 @@ export const movementsBalanceQueryKeys = {
 export function useMovementsBalance(params: MovementsBalanceParams) {
   return useQuery<MovementsBalanceResponse, ApiError>({
     queryKey: movementsBalanceQueryKeys.list(params),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await getMovementsBalance(params);
+        return await getMovementsBalance(params, signal);
       } catch (error) {
         throw toApiError(error);
       }

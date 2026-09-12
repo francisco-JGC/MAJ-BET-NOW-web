@@ -44,10 +44,12 @@ export async function getBranchTotals(
 
 export async function getSellerReport(
   params: SellerReportParams,
+  signal?: AbortSignal,
 ): Promise<SellerReportResponse> {
   const { data } = await http.get<SellerReportResponse>(
     '/tickets/seller-report',
     {
+      signal,
       params: {
         salePointId: params.salePointId || undefined,
         salePointIds:

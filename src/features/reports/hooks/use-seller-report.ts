@@ -18,9 +18,9 @@ export const sellerReportQueryKeys = {
 export function useSellerReport(params: SellerReportParams) {
   return useQuery<SellerReportResponse, ApiError>({
     queryKey: sellerReportQueryKeys.list(params),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await getSellerReport(params);
+        return await getSellerReport(params, signal);
       } catch (error) {
         throw toApiError(error);
       }

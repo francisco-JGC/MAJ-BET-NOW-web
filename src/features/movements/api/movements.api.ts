@@ -71,10 +71,12 @@ export async function getBranchFlow(
 
 export async function getSellerMovementsBalance(
   params: SellerMovementsBalanceParams,
+  signal?: AbortSignal,
 ): Promise<SellerMovementsBalanceResponse> {
   const { data } = await http.get<SellerMovementsBalanceResponse>(
     '/movements/seller-balance',
     {
+      signal,
       params: {
         salePointIds:
           params.salePointIds && params.salePointIds.length > 0
@@ -90,10 +92,12 @@ export async function getSellerMovementsBalance(
 
 export async function getMovementsBalance(
   params: MovementsBalanceParams,
+  signal?: AbortSignal,
 ): Promise<MovementsBalanceResponse> {
   const { data } = await http.get<MovementsBalanceResponse>(
     '/movements/balance',
     {
+      signal,
       params: {
         salePointId: params.salePointId || undefined,
         // Backend acepta CSV en `salePointIds`. Solo lo mandamos si hay al

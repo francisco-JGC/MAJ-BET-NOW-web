@@ -18,9 +18,9 @@ export const sellerMovementsBalanceQueryKeys = {
 export function useSellerMovementsBalance(params: SellerMovementsBalanceParams) {
   return useQuery<SellerMovementsBalanceResponse, ApiError>({
     queryKey: sellerMovementsBalanceQueryKeys.list(params),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await getSellerMovementsBalance(params);
+        return await getSellerMovementsBalance(params, signal);
       } catch (error) {
         throw toApiError(error);
       }

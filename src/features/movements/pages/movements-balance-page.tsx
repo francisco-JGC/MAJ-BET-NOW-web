@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -108,9 +109,15 @@ export function MovementsBalancePage() {
     [salePointIds, gameId, drawTime, from, to],
   );
 
-  const balanceQuery = useMovementsBalance(rangeParams);
-  const sellerQuery = useSellerReport(rangeParams);
-  const sellerBalanceQuery = useSellerMovementsBalance(rangeParams);
+  // 600ms debounce — when the user clicks through dates quickly only ONE
+  // request fires (after they stop), instead of one per intermediate date.
+  // The UI (FiltersBar) still updates instantly from rangeParams; the
+  // queries wait for the debounced copy.
+  const debouncedParams = useDebounce(rangeParams, 600);
+
+  const balanceQuery = useMovementsBalance(debouncedParams);
+  const sellerQuery = useSellerReport(debouncedParams);
+  const sellerBalanceQuery = useSellerMovementsBalance(debouncedParams);
 
   const { data: salePoints } = useSalePoints();
 
@@ -181,8 +188,8 @@ export function MovementsBalancePage() {
             sellerBalanceById={sellerBalanceById}
             loading={sellerQuery.isLoading}
             showSalary={showSalary}
-            from={rangeParams.from}
-            to={rangeParams.to}
+            from={debouncedParams.from}
+            to={debouncedParams.to}
           />
         )}
       </section>
