@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-
-import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   Calendar,
   ChevronLeft,
@@ -96,9 +94,7 @@ export function SalesPage() {
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Debounce date/dropdown filters (600ms) — separate from the search debounce (300ms).
-  // Page changes are NOT debounced so navigation is always immediate.
-  const filterParams = useMemo(
+  const params = useMemo(
     () => ({
       status: status === 'all' ? undefined : status,
       gameId: gameId || undefined,
@@ -107,19 +103,11 @@ export function SalesPage() {
       sellerId: sellerId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
       to: to ? endOfDayParam(to) : undefined,
-    }),
-    [status, gameId, drawTime, salePointId, sellerId, from, to],
-  );
-  const debouncedFilters = useDebounce(filterParams, 600);
-
-  const params = useMemo(
-    () => ({
-      ...debouncedFilters,
       search: debouncedSearch || undefined,
       page,
       limit: PAGE_SIZE,
     }),
-    [debouncedFilters, debouncedSearch, page],
+    [status, gameId, drawTime, salePointId, sellerId, from, to, debouncedSearch, page],
   );
 
   const { data, isLoading, error, isFetching } = useTickets(params);
