@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+
+import { useDebounce } from '@/shared/hooks/use-debounce';
 import {
   Calendar,
   ChevronLeft,
@@ -14,7 +16,7 @@ import {
 import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { TicketDetailsModal } from '@/features/tickets/components/ticket-details-modal';
-import { useTickets } from '@/features/tickets/hooks/use-tickets';
+import { useTicket, useTickets } from '@/features/tickets/hooks/use-tickets';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
 import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
@@ -94,7 +96,9 @@ export function SalesPage() {
   const [page, setPage] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const params = useMemo(
+  // Debounce date/dropdown filters (600ms) — separate from the search debounce (300ms).
+  // Page changes are NOT debounced so navigation is always immediate.
+  const filterParams = useMemo(
     () => ({
       status: status === 'all' ? undefined : status,
       gameId: gameId || undefined,
@@ -103,23 +107,28 @@ export function SalesPage() {
       sellerId: sellerId || undefined,
       from: from ? `${from}T00:00:00-06:00` : undefined,
       to: to ? endOfDayParam(to) : undefined,
-      search: debouncedSearch || undefined,
     }),
-    [
-      status,
-      gameId,
-      drawTime,
-      salePointId,
-      sellerId,
-      from,
-      to,
-      debouncedSearch,
-    ],
+    [status, gameId, drawTime, salePointId, sellerId, from, to],
+  );
+  const debouncedFilters = useDebounce(filterParams, 600);
+
+  const params = useMemo(
+    () => ({
+      ...debouncedFilters,
+      search: debouncedSearch || undefined,
+      page,
+      limit: PAGE_SIZE,
+    }),
+    [debouncedFilters, debouncedSearch, page],
   );
 
   const { data, isLoading, error, isFetching } = useTickets(params);
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+
+  // Fetch individual ticket for the modal — covers the case where the ticket
+  // was clicked on a page that has since been navigated away from.
+  const { data: selectedTicket } = useTicket(selectedId);
 
   const { data: games } = useGames();
   const { data: salePoints } = useSalePoints();
@@ -175,43 +184,20 @@ export function SalesPage() {
       .sort((a, b) => a.drawTime.localeCompare(b.drawTime));
   }, [schedules]);
 
-  // El filtrado por folio/cliente ahora ocurre server-side (ver `params.search`).
-  // Nombre `filteredItems` retenido porque `pagedItems` y las stats lo consumen.
-  const filteredItems = items;
-
-  const stats = useMemo(() => {
-    // `billed` y `won` los devuelve el server calculados sobre el rango
-    // completo. `voided` es local — cuenta los items visibles (con el
-    // limit 100k del server prácticamente coincide con el total real).
-    let voided = 0;
-    for (const t of items) {
-      if (t.status === 'voided') voided += 1;
-    }
-    return {
+  const stats = useMemo(
+    () => ({
       total,
       billed: data?.totalBilled ?? 0,
       won: data?.totalWonPrize ?? 0,
-      voided,
-    };
-  }, [items, total, data]);
-
-  // Paginación en cliente sobre `filteredItems`: el server ya devuelve
-  // todo el rango, la UI solo trocea de a PAGE_SIZE para no renderizar
-  // miles de filas de una.
-  const pagedItems = useMemo(() => {
-    const start = page * PAGE_SIZE;
-    return filteredItems.slice(start, start + PAGE_SIZE);
-  }, [filteredItems, page]);
-  const filteredCount = filteredItems.length;
-  const rangeStart = filteredCount === 0 ? 0 : page * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(filteredCount, (page + 1) * PAGE_SIZE);
-  const hasPrev = page > 0;
-  const hasNext = rangeEnd < filteredCount;
-
-  const selectedTicket = useMemo(
-    () => items.find((t) => t.id === selectedId) ?? null,
-    [items, selectedId],
+    }),
+    [total, data],
   );
+
+  // Server returns exactly one page — pagination math is based on server total.
+  const rangeStart = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(total, (page + 1) * PAGE_SIZE);
+  const hasPrev = page > 0;
+  const hasNext = rangeEnd < total;
 
   return (
     <div className="space-y-6">
@@ -226,9 +212,6 @@ export function SalesPage() {
             tickets · <span className="font-semibold text-emerald-700">{formatCurrency(stats.billed)}</span> facturado
             {' · '}
             <span className="font-semibold text-rose-700">{formatCurrency(stats.won)}</span> ganado
-            {stats.voided > 0 && (
-              <> · <span className="font-semibold text-rose-700">{stats.voided}</span> anulados</>
-            )}
           </span>
         </div>
       </header>
@@ -393,7 +376,7 @@ export function SalesPage() {
             <tbody className="divide-y divide-border/60">
               {isLoading && items.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : filteredItems.length === 0 ? (
+              ) : items.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
@@ -405,7 +388,7 @@ export function SalesPage() {
                   </td>
                 </tr>
               ) : (
-                pagedItems.map((ticket) => (
+                items.map((ticket) => (
                   <TicketRow
                     key={ticket.id}
                     ticket={ticket}
@@ -471,9 +454,9 @@ export function SalesPage() {
       </div>
 
       <TicketDetailsModal
-        open={selectedTicket !== null}
+        open={selectedId !== null}
         onClose={() => setSelectedId(null)}
-        ticket={selectedTicket}
+        ticket={selectedTicket ?? null}
         gameName={selectedTicket ? gameById.get(selectedTicket.gameId)?.name ?? null : null}
         salePointName={
           selectedTicket ? salePointById.get(selectedTicket.salePointId)?.name ?? null : null

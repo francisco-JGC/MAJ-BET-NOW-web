@@ -26,9 +26,9 @@ export const ticketsQueryKeys = {
 export function useTickets(params: ListTicketsParams) {
   return useQuery<ListTicketsResponse, ApiError>({
     queryKey: ticketsQueryKeys.list(params),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await listTickets(params);
+        return await listTickets(params, signal);
       } catch (error) {
         throw toApiError(error);
       }

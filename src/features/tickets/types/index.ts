@@ -51,15 +51,19 @@ export interface ListTicketsParams {
    * es encontrar el ticket sin importar cuándo se emitió.
    */
   search?: string;
+  /** 0-indexed page for server-side pagination (default 0). */
+  page?: number;
+  /** Items per page (default 20). */
+  limit?: number;
 }
 
 export interface ListTicketsResponse {
   items: Ticket[];
-  /** Cantidad total (mismo que `items.length` — el endpoint no pagina). */
+  /** Total de registros en el rango filtrado (para UI de paginación). */
   total: number;
-  /** Suma de `total` (facturado) sobre TODOS los items válidos. */
+  /** Suma de `total` (facturado) sobre TODOS los tickets válidos del rango. */
   totalBilled: number;
-  /** Suma de `wonPrize` (evaluado contra draw_results) sobre TODOS los items. */
+  /** Suma de premios ganados sobre TODOS los tickets válidos del rango. */
   totalWonPrize: number;
 }
 

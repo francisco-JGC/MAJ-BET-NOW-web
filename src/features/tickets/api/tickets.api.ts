@@ -9,8 +9,10 @@ import type {
 
 export async function listTickets(
   params: ListTicketsParams,
+  signal?: AbortSignal,
 ): Promise<ListTicketsResponse> {
   const { data } = await http.get<ListTicketsResponse>('/tickets', {
+    signal,
     params: {
       salePointId: params.salePointId || undefined,
       gameId: params.gameId || undefined,
@@ -20,6 +22,8 @@ export async function listTickets(
       to: params.to || undefined,
       drawTime: params.drawTime || undefined,
       search: params.search || undefined,
+      page: params.page ?? 0,
+      limit: params.limit ?? 20,
     },
   });
   return data;
