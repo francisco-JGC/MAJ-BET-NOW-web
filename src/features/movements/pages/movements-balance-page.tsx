@@ -211,6 +211,8 @@ export function MovementsBalancePage() {
             rows={balanceRows}
             loading={balanceQuery.isLoading}
             showSalary={showSalary}
+            from={debouncedParams.from}
+            to={debouncedParams.to}
           />
         )}
       </section>
@@ -375,10 +377,14 @@ function BranchCards({
   rows,
   loading,
   showSalary,
+  from,
+  to,
 }: {
   rows: MovementsBalanceRow[];
   loading: boolean;
   showSalary: boolean;
+  from?: string;
+  to?: string;
 }) {
   if (loading && rows.length === 0) {
     return (
@@ -397,7 +403,7 @@ function BranchCards({
       {/* Sumatoria general — SIEMPRE primera. Refleja los mismos stats
           que un BranchCard, pero sumando todas las sucursales visibles
           en el rango. */}
-      <BranchSummaryCard rows={rows} showSalary={showSalary} />
+      <BranchSummaryCard rows={rows} showSalary={showSalary} from={from} to={to} />
       {rows.map((row) => (
         <BranchCard key={row.salePointId} row={row} showSalary={showSalary} />
       ))}
@@ -405,13 +411,80 @@ function BranchCards({
   );
 }
 
+const BRANCH_MOVEMENT_LABEL: Record<string, string> = {
+  [MovementType.DEPOSIT]: 'Depósito',
+  [MovementType.WITHDRAWAL]: 'Retiro',
+  [MovementType.ADJUSTMENT]: 'Ajuste',
+  [MovementType.OPENING]: 'Apertura',
+  [MovementType.CLOSING]: 'Cierre',
+};
+
+function BranchMovementsSection({ from, to }: { from?: string; to?: string }) {
+  const { data, isLoading } = useMovements({ from, to, page: 1, limit: 200 });
+  const items = data?.items ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 space-y-1.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-8 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length === 0) {
+    return (
+      <p className="mt-3 text-center text-[11px] text-muted-foreground">
+        Sin movimientos en este período
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-3 divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60">
+      {items.map((m) => {
+        const label = BRANCH_MOVEMENT_LABEL[m.type] ?? m.type;
+        const isDeposit = m.type === MovementType.DEPOSIT;
+        const isWithdrawal = m.type === MovementType.WITHDRAWAL;
+        const amountColor = isDeposit ? 'text-emerald-700' : isWithdrawal ? 'text-rose-700' : 'text-foreground';
+        const badgeClass = isDeposit
+          ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/20'
+          : isWithdrawal
+            ? 'bg-rose-50 text-rose-700 ring-rose-500/20'
+            : 'bg-slate-50 text-slate-700 ring-slate-500/20';
+        const sign = isDeposit ? '+' : isWithdrawal ? '−' : '';
+        const who = m.sellerName ?? null;
+        return (
+          <li key={m.id} className="flex items-center gap-3 bg-background/60 px-3 py-2.5 text-xs">
+            <span className={cn('shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset', badgeClass)}>
+              {label}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              {who && <span className="mr-1 font-semibold text-foreground">{who}</span>}
+              {m.description || <span className="italic opacity-50">Sin descripción</span>}
+            </span>
+            <span className={cn('shrink-0 tabular-nums font-bold', amountColor)}>
+              {sign}{formatCurrency(m.amount)}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function BranchSummaryCard({
   rows,
   showSalary,
+  from,
+  to,
 }: {
   rows: MovementsBalanceRow[];
   showSalary: boolean;
+  from?: string;
+  to?: string;
 }) {
+  const [showHistory, setShowHistory] = useState(false);
+
   const totals = useMemo(() => {
     let billed = 0;
     let wonPrize = 0;
@@ -445,6 +518,7 @@ function BranchSummaryCard({
   // en `row.net`, así que sumamos de vuelta cuando el toggle está en OFF.
   const effectiveNet = showSalary ? totals.net : totals.net + totals.partnerSalary;
   const isPositive = effectiveNet >= 0;
+  const hasMovements = totals.deposits > 0 || totals.withdrawals > 0 || totals.adjustments !== 0;
 
   return (
     <article
@@ -496,6 +570,30 @@ function BranchSummaryCard({
           />
         )}
       </dl>
+
+      {/* Historial de movimientos de todas las sucursales */}
+      <button
+        type="button"
+        onClick={() => setShowHistory((v) => !v)}
+        className={cn(
+          'mt-4 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-[11px] font-semibold transition',
+          hasMovements
+            ? 'border-indigo-300/60 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/70'
+            : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60',
+        )}
+      >
+        <span className="flex items-center gap-1.5">
+          <History className="size-3" strokeWidth={2.4} />
+          Historial de movimientos
+          {hasMovements && (
+            <span className="size-1.5 rounded-full bg-current" />
+          )}
+        </span>
+        {showHistory
+          ? <ChevronUp className="size-3.5" strokeWidth={2.4} />
+          : <ChevronDown className="size-3.5" strokeWidth={2.4} />}
+      </button>
+      {showHistory && <BranchMovementsSection from={from} to={to} />}
     </article>
   );
 }
@@ -733,6 +831,7 @@ function SellerCard({
   const net = row.billed - row.wonPrize - salary - cobros + credits;
   const isPositive = net >= 0;
   const hasCobros = cobros > 0 || credits > 0;
+  const hasMovements = cobros > 0 || credits > 0 || prizePayments > 0;
   return (
     <article
       ref={cardRef}
@@ -814,11 +913,19 @@ function SellerCard({
         type="button"
         data-share-hide="true"
         onClick={() => setShowHistory((v) => !v)}
-        className="mt-4 flex w-full items-center justify-between rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:bg-muted/60 transition"
+        className={cn(
+          'mt-4 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-[11px] font-semibold transition',
+          hasMovements
+            ? 'border-indigo-300/60 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/70'
+            : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60',
+        )}
       >
         <span className="flex items-center gap-1.5">
           <History className="size-3" strokeWidth={2.4} />
           Historial de movimientos
+          {hasMovements && (
+            <span className="size-1.5 rounded-full bg-current" />
+          )}
         </span>
         {showHistory
           ? <ChevronUp className="size-3.5" strokeWidth={2.4} />
