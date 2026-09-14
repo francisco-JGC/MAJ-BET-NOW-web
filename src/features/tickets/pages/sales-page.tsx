@@ -220,7 +220,10 @@ export function SalesPage() {
             <input
               type="search"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               placeholder="Buscar por folio o cliente"
               className={cn(inputClass, 'pl-9')}
             />
