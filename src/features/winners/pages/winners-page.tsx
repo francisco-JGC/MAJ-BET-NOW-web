@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Calendar,
   CheckCircle2,
   Dices,
   MapPin,
@@ -24,19 +23,62 @@ import type { Ticket } from '@/features/tickets/types';
 import { UserRole } from '@/features/users/types';
 import type { WinningTicket } from '@/features/winners/types';
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const CURRENT_YEAR = new Date().getFullYear();
+
+const MONTH_OPTIONS = [
+  { value: '1', label: 'Enero' },
+  { value: '2', label: 'Febrero' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Mayo' },
+  { value: '6', label: 'Junio' },
+  { value: '7', label: 'Julio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+];
+
+function daysInMonth(month: number): number {
+  return new Date(CURRENT_YEAR, month, 0).getDate();
+}
+
+function dayOptions(month: number): { value: string; label: string }[] {
+  return Array.from({ length: daysInMonth(month) }, (_, i) => ({
+    value: String(i + 1),
+    label: String(i + 1),
+  }));
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
 export function WinnersPage() {
   const [gameId, setGameId] = useState<string>('');
   const [salePointId, setSalePointId] = useState<string>('');
   const [sellerId, setSellerId] = useState<string>('');
-  const [from, setFrom] = useState<string>(isoDate(new Date()));
-  const [to, setTo] = useState<string>(isoDate(new Date()));
+
+  const today = new Date();
+  const [fromMonth, setFromMonth] = useState(today.getMonth() + 1);
+  const [fromDay, setFromDay] = useState(today.getDate());
+  const [toMonth, setToMonth] = useState(today.getMonth() + 1);
+  const [toDay, setToDay] = useState(today.getDate());
+
+  const handleFromMonth = (v: string) => {
+    const m = Number(v);
+    setFromMonth(m);
+    if (fromDay > daysInMonth(m)) setFromDay(daysInMonth(m));
+  };
+  const handleToMonth = (v: string) => {
+    const m = Number(v);
+    setToMonth(m);
+    if (toDay > daysInMonth(m)) setToDay(daysInMonth(m));
+  };
+
+  const fromDateStr = `${CURRENT_YEAR}-${pad(fromMonth)}-${pad(fromDay)}`;
+  const toDateStr = `${CURRENT_YEAR}-${pad(toMonth)}-${pad(toDay)}`;
   const [search, setSearch] = useState('');
   // Debounce igual que en `sales-page` — el filtro server-side sobre folio
   // ignora rango de fechas, así que un folio de otro día aparece igual.
@@ -56,11 +98,11 @@ export function WinnersPage() {
       gameId: gameId || undefined,
       salePointId: salePointId || undefined,
       sellerId: sellerId || undefined,
-      from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? endOfDayParam(to) : undefined,
+      from: `${fromDateStr}T00:00:00-06:00`,
+      to: endOfDayParam(toDateStr),
       search: debouncedSearch || undefined,
     }),
-    [gameId, salePointId, sellerId, from, to, debouncedSearch],
+    [gameId, salePointId, sellerId, fromDateStr, toDateStr, debouncedSearch],
   );
 
   const winnersQuery = useWinners(params);
@@ -174,30 +216,44 @@ export function WinnersPage() {
             />
           </Field>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Desde">
-              <div className="relative">
-                <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={from}
-                  max={to}
-                  onChange={(e) => setFrom(e.target.value)}
-                  className={cn(inputClass, 'pl-9')}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Desde
+              </span>
+              <div className="grid grid-cols-2 gap-1">
+                <Select
+                  value={String(fromMonth)}
+                  onChange={handleFromMonth}
+                  options={MONTH_OPTIONS}
+                  placeholder="Mes"
+                />
+                <Select
+                  value={String(fromDay)}
+                  onChange={(v) => setFromDay(Number(v))}
+                  options={dayOptions(fromMonth)}
+                  placeholder="Día"
                 />
               </div>
-            </Field>
-            <Field label="Hasta">
-              <div className="relative">
-                <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={to}
-                  min={from}
-                  onChange={(e) => setTo(e.target.value)}
-                  className={cn(inputClass, 'pl-9')}
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Hasta
+              </span>
+              <div className="grid grid-cols-2 gap-1">
+                <Select
+                  value={String(toMonth)}
+                  onChange={handleToMonth}
+                  options={MONTH_OPTIONS}
+                  placeholder="Mes"
+                />
+                <Select
+                  value={String(toDay)}
+                  onChange={(v) => setToDay(Number(v))}
+                  options={dayOptions(toMonth)}
+                  placeholder="Día"
                 />
               </div>
-            </Field>
+            </div>
           </div>
         </div>
       </div>
