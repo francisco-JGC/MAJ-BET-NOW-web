@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Calendar,
   CalendarClock,
   Check,
   Dices,
@@ -32,12 +31,29 @@ interface Props {
   existing?: DrawResult | null;
 }
 
-function isoToday(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const CURRENT_YEAR = new Date().getFullYear();
+
+const MONTH_OPTIONS = [
+  { value: '1', label: 'Enero' },
+  { value: '2', label: 'Febrero' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Mayo' },
+  { value: '6', label: 'Junio' },
+  { value: '7', label: 'Julio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+];
+
+function daysInMonth(month: number): number {
+  return new Date(CURRENT_YEAR, month, 0).getDate();
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
 /** Parses ISO drawAt into local date+time components for pre-filling. */
@@ -63,9 +79,31 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
   const isEdit = existing != null;
 
   const [gameId, setGameId] = useState<string>('');
-  const [date, setDate] = useState<string>(isoToday());
+  const [dateMonth, setDateMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [dateDay, setDateDay] = useState<number>(() => new Date().getDate());
   const [time, setTime] = useState<string>('');
   const [winningNumber, setWinningNumber] = useState<string>('');
+
+  const date = useMemo(
+    () => `${CURRENT_YEAR}-${pad(dateMonth)}-${pad(dateDay)}`,
+    [dateMonth, dateDay],
+  );
+
+  const dateDayOptions = useMemo(
+    () =>
+      Array.from({ length: daysInMonth(dateMonth) }, (_, i) => ({
+        value: String(i + 1),
+        label: String(i + 1),
+      })),
+    [dateMonth],
+  );
+
+  const handleDateMonth = (v: string) => {
+    const m = Number(v);
+    setDateMonth(m);
+    setDateDay((d) => Math.min(d, daysInMonth(m)));
+    setTime('');
+  };
 
   const { data: games } = useGames();
   const { data: schedules } = useGameSchedules(
@@ -73,7 +111,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
   );
   // Existing results for the same game + day, to mark schedules that are
   // already registered so the admin doesn't try to insert a duplicate.
-  const shouldFetchExisting = !isEdit && gameId !== '' && date !== '';
+  const shouldFetchExisting = !isEdit && gameId !== '';
   const { data: existingResultsToday } = useDrawResults(
     {
       gameId: gameId || undefined,
@@ -95,13 +133,17 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
     setConfirmDelete(false);
     if (existing) {
       const { date: d, time: t } = splitIsoDrawAt(existing.drawAt);
+      const [, mo, dy] = d.split('-').map(Number);
       setGameId(existing.gameId);
-      setDate(d);
+      setDateMonth(mo);
+      setDateDay(dy);
       setTime(t);
       setWinningNumber(existing.winningNumber);
     } else {
+      const now = new Date();
       setGameId('');
-      setDate(isoToday());
+      setDateMonth(now.getMonth() + 1);
+      setDateDay(now.getDate());
       setTime('');
       setWinningNumber('');
     }
@@ -280,17 +322,23 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
         </Field>
 
         <Field label="Fecha" required>
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
+          <div className="flex gap-2">
+            <Select
+              value={String(dateMonth)}
+              onChange={handleDateMonth}
+              disabled={isEdit}
+              ariaLabel="Mes"
+              options={MONTH_OPTIONS}
+            />
+            <Select
+              value={String(dateDay)}
+              onChange={(v) => {
+                setDateDay(Number(v));
                 setTime('');
               }}
               disabled={isEdit}
-              className={cn(inputClass, 'pl-9')}
+              ariaLabel="Día"
+              options={dateDayOptions}
             />
           </div>
         </Field>

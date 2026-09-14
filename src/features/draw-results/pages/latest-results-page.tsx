@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Dices, History, Plus, Trophy } from 'lucide-react';
+import { Dices, History, Plus, Trophy } from 'lucide-react';
 
 import { RegisterResultModal } from '@/features/draw-results/components/register-result-modal';
 import { useDrawResults } from '@/features/draw-results/hooks/use-draw-results';
@@ -15,22 +15,29 @@ import type { Game } from '@/features/games/types';
 
 const DEFAULT_LIMIT = 200;
 
-/** Local "YYYY-MM-DD" (no timezone conversion). */
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const CURRENT_YEAR = new Date().getFullYear();
+
+const MONTH_OPTIONS = [
+  { value: '1', label: 'Enero' },
+  { value: '2', label: 'Febrero' },
+  { value: '3', label: 'Marzo' },
+  { value: '4', label: 'Abril' },
+  { value: '5', label: 'Mayo' },
+  { value: '6', label: 'Junio' },
+  { value: '7', label: 'Julio' },
+  { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Septiembre' },
+  { value: '10', label: 'Octubre' },
+  { value: '11', label: 'Noviembre' },
+  { value: '12', label: 'Diciembre' },
+];
+
+function daysInMonth(month: number): number {
+  return new Date(CURRENT_YEAR, month, 0).getDate();
 }
 
-function todayIso(): string {
-  return isoDate(new Date());
-}
-
-function daysAgoIso(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return isoDate(d);
+function pad(n: number): string {
+  return String(n).padStart(2, '0');
 }
 
 export function LatestResultsPage() {
@@ -38,10 +45,45 @@ export function LatestResultsPage() {
   const isPartner = session?.user.role === UserRole.PARTNER;
 
   const [gameId, setGameId] = useState<string>('');
-  const [from, setFrom] = useState<string>(daysAgoIso(7));
-  const [to, setTo] = useState<string>(todayIso());
+  const [fromMonth, setFromMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [fromDay, setFromDay] = useState<number>(() => new Date().getDate());
+  const [toMonth, setToMonth] = useState<number>(() => new Date().getMonth() + 1);
+  const [toDay, setToDay] = useState<number>(() => new Date().getDate());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DrawResult | null>(null);
+
+  const fromDateStr = `${CURRENT_YEAR}-${pad(fromMonth)}-${pad(fromDay)}`;
+  const toDateStr = `${CURRENT_YEAR}-${pad(toMonth)}-${pad(toDay)}`;
+
+  const fromDayOptions = useMemo(
+    () =>
+      Array.from({ length: daysInMonth(fromMonth) }, (_, i) => ({
+        value: String(i + 1),
+        label: String(i + 1),
+      })),
+    [fromMonth],
+  );
+
+  const toDayOptions = useMemo(
+    () =>
+      Array.from({ length: daysInMonth(toMonth) }, (_, i) => ({
+        value: String(i + 1),
+        label: String(i + 1),
+      })),
+    [toMonth],
+  );
+
+  const handleFromMonth = (v: string) => {
+    const m = Number(v);
+    setFromMonth(m);
+    setFromDay((d) => Math.min(d, daysInMonth(m)));
+  };
+
+  const handleToMonth = (v: string) => {
+    const m = Number(v);
+    setToMonth(m);
+    setToDay((d) => Math.min(d, daysInMonth(m)));
+  };
 
   // Managua wall-clock day boundaries. Using UTC (`Z`) here dropped late
   // evening draws whose absolute instant already rolled over to the next
@@ -51,12 +93,12 @@ export function LatestResultsPage() {
   const params = useMemo(
     () => ({
       gameId: gameId || undefined,
-      from: from ? `${from}T00:00:00-06:00` : undefined,
-      to: to ? endOfDayParam(to) : undefined,
+      from: `${fromDateStr}T00:00:00-06:00`,
+      to: endOfDayParam(toDateStr),
       limit: DEFAULT_LIMIT,
       offset: 0,
     }),
-    [gameId, from, to],
+    [gameId, fromDateStr, toDateStr],
   );
 
   const { data: games } = useGames();
@@ -118,26 +160,34 @@ export function LatestResultsPage() {
           />
         </Field>
         <Field label="Desde">
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="date"
-              value={from}
-              max={to}
-              onChange={(e) => setFrom(e.target.value)}
-              className={cn(inputClass, 'pl-9')}
+          <div className="flex gap-2">
+            <Select
+              value={String(fromMonth)}
+              onChange={handleFromMonth}
+              ariaLabel="Mes desde"
+              options={MONTH_OPTIONS}
+            />
+            <Select
+              value={String(fromDay)}
+              onChange={(v) => setFromDay(Number(v))}
+              ariaLabel="Día desde"
+              options={fromDayOptions}
             />
           </div>
         </Field>
         <Field label="Hasta">
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="date"
-              value={to}
-              min={from}
-              onChange={(e) => setTo(e.target.value)}
-              className={cn(inputClass, 'pl-9')}
+          <div className="flex gap-2">
+            <Select
+              value={String(toMonth)}
+              onChange={handleToMonth}
+              ariaLabel="Mes hasta"
+              options={MONTH_OPTIONS}
+            />
+            <Select
+              value={String(toDay)}
+              onChange={(v) => setToDay(Number(v))}
+              ariaLabel="Día hasta"
+              options={toDayOptions}
             />
           </div>
         </Field>
@@ -377,5 +427,3 @@ function Field({
   );
 }
 
-const inputClass =
-  'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
