@@ -428,7 +428,7 @@ function BranchMovementsSection({
   from?: string;
   to?: string;
 }) {
-  const { data, isLoading } = useMovements({ salePointId, from, to, page: 1, limit: 200 });
+  const { data, isLoading } = useMovements({ salePointId, from, to, page: 1, limit: 100 });
   const items = data?.items ?? [];
 
   if (isLoading) {
