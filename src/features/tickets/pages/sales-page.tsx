@@ -195,7 +195,10 @@ export function SalesPage() {
           <h1 className="text-2xl font-black tracking-tight">Facturas</h1>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span>
+          {isFetching && (
+            <span className="animate-pulse">Actualizando…</span>
+          )}
+          <span className={cn('transition-opacity', isFetching && 'opacity-40')}>
             <span className="font-semibold text-foreground">{stats.total}</span>{' '}
             tickets · <span className="font-semibold text-emerald-700">{formatCurrency(stats.billed)}</span> facturado
             {' · '}

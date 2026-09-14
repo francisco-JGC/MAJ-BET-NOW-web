@@ -21,9 +21,9 @@ export const winnersQueryKeys = {
 export function useWinners(params: ListWinnersParams) {
   return useQuery<WinningTicket[], ApiError>({
     queryKey: winnersQueryKeys.list(params),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        return await listWinningTickets(params);
+        return await listWinningTickets(params, signal);
       } catch (error) {
         throw toApiError(error);
       }

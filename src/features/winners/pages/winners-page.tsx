@@ -108,6 +108,7 @@ export function WinnersPage() {
   const winnersQuery = useWinners(params);
   const winners: WinningTicket[] = winnersQuery.data ?? [];
   const isLoading = winnersQuery.isLoading;
+  const isFetching = winnersQuery.isFetching;
   const error = winnersQuery.error;
 
   const { data: games } = useGames();
@@ -153,9 +154,14 @@ export function WinnersPage() {
           <Trophy className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-black tracking-tight">Ganadores</h1>
         </div>
+        {isFetching && (
+          <span className="text-xs text-muted-foreground animate-pulse">
+            Actualizando…
+          </span>
+        )}
       </header>
 
-      <div className="grid gap-4">
+      <div className={cn('grid gap-4 transition-opacity', isFetching && 'opacity-50')}>
         <StatCard
           tone="purple"
           label="Total ganado por clientes"
@@ -277,7 +283,7 @@ export function WinnersPage() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className={cn('grid gap-3 sm:grid-cols-2 xl:grid-cols-3 transition-opacity', isFetching && 'opacity-50')}>
         {filtered.map((w) => (
           <WinnerCard
             key={w.ticket.id}

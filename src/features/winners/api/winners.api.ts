@@ -8,8 +8,10 @@ import type {
 
 export async function listWinningTickets(
   params: ListWinnersParams,
+  signal?: AbortSignal,
 ): Promise<WinningTicket[]> {
   const { data } = await http.get<WinningTicket[]>('/tickets/winners', {
+    signal,
     params: {
       gameId: params.gameId || undefined,
       salePointId: params.salePointId || undefined,
