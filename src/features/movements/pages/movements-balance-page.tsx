@@ -405,7 +405,7 @@ function BranchCards({
           en el rango. */}
       <BranchSummaryCard rows={rows} showSalary={showSalary} from={from} to={to} />
       {rows.map((row) => (
-        <BranchCard key={row.salePointId} row={row} showSalary={showSalary} />
+        <BranchCard key={row.salePointId} row={row} showSalary={showSalary} from={from} to={to} />
       ))}
     </CardsScroller>
   );
@@ -419,8 +419,16 @@ const BRANCH_MOVEMENT_LABEL: Record<string, string> = {
   [MovementType.CLOSING]: 'Cierre',
 };
 
-function BranchMovementsSection({ from, to }: { from?: string; to?: string }) {
-  const { data, isLoading } = useMovements({ from, to, page: 1, limit: 200 });
+function BranchMovementsSection({
+  salePointId,
+  from,
+  to,
+}: {
+  salePointId?: string;
+  from?: string;
+  to?: string;
+}) {
+  const { data, isLoading } = useMovements({ salePointId, from, to, page: 1, limit: 200 });
   const items = data?.items ?? [];
 
   if (isLoading) {
@@ -601,11 +609,16 @@ function BranchSummaryCard({
 function BranchCard({
   row,
   showSalary,
+  from,
+  to,
 }: {
   row: MovementsBalanceRow;
   showSalary: boolean;
+  from?: string;
+  to?: string;
 }) {
   const cardRef = useRef<HTMLElement>(null);
+  const [showHistory, setShowHistory] = useState(false);
   // Con "Salarios" apagado, no descontamos el salario del encargado en el
   // restante — el backend siempre lo mete en `row.net`, así que sumamos
   // de vuelta cuando el toggle está en OFF.
@@ -613,6 +626,7 @@ function BranchCard({
     ? (row.net ?? 0)
     : (row.net ?? 0) + (row.partnerSalary ?? 0);
   const isPositive = effectiveNet >= 0;
+  const hasMovements = (row.deposits ?? 0) > 0 || (row.withdrawals ?? 0) > 0 || (row.adjustments ?? 0) !== 0;
   // Sólo mostramos salario del encargado si hay % configurado en la
   // sucursal — sin % no cobra (mismo criterio que el SellerCard).
   const showManagerSalary =
@@ -687,6 +701,31 @@ function BranchCard({
           />
         )}
       </dl>
+
+      {/* Historial de movimientos de la sucursal */}
+      <button
+        type="button"
+        data-share-hide="true"
+        onClick={() => setShowHistory((v) => !v)}
+        className={cn(
+          'mt-4 flex w-full items-center justify-between rounded-lg border px-3 py-2 text-[11px] font-semibold transition',
+          hasMovements
+            ? 'border-indigo-300/60 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100/70'
+            : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/60',
+        )}
+      >
+        <span className="flex items-center gap-1.5">
+          <History className="size-3" strokeWidth={2.4} />
+          Historial de movimientos
+          {hasMovements && <span className="size-1.5 rounded-full bg-current" />}
+        </span>
+        {showHistory
+          ? <ChevronUp className="size-3.5" strokeWidth={2.4} />
+          : <ChevronDown className="size-3.5" strokeWidth={2.4} />}
+      </button>
+      {showHistory && (
+        <BranchMovementsSection salePointId={row.salePointId} from={from} to={to} />
+      )}
     </article>
   );
 }
