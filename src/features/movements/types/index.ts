@@ -1,5 +1,4 @@
 export const MovementType = {
-  EXPENSE: 'expense',
   DEPOSIT: 'deposit',
   WITHDRAWAL: 'withdrawal',
   OPENING: 'opening',
@@ -48,10 +47,9 @@ export interface MovementsBalanceRow {
   wonPrize: number;
   deposits: number;
   withdrawals: number;
-  expenses: number;
   /** Signed sum of adjustments (positive adds to net, negative subtracts). */
   adjustments: number;
-  /** net = billed - wonPrize + deposits - withdrawals - expenses + adjustments */
+  /** net = billed - wonPrize + deposits - withdrawals + adjustments */
   net: number;
 }
 

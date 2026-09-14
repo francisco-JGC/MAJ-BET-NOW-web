@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  BarChart3,
   Calculator,
   ChevronDown,
   Dices,
@@ -50,7 +49,7 @@ const NAV_ENTRIES: readonly NavEntry[] = [
   { to: APP_ROUTES.home, label: 'Inicio', icon: Home },
   { to: APP_ROUTES.sales, label: 'Facturas', icon: Receipt },
   { to: APP_ROUTES.users, label: 'Usuarios', icon: User },
-  { to: APP_ROUTES.winners, label: 'Ganadores', icon: Trophy },
+  { to: APP_ROUTES.winners, label: 'Ganadores', icon: Trophy, roles: ADMIN_ONLY },
   { to: APP_ROUTES.movements, label: 'Movimientos', icon: Repeat },
   { to: APP_ROUTES.salesByNumber, label: 'Montos Máximos', icon: Shield, roles: ADMIN_ONLY },
   {
@@ -59,7 +58,6 @@ const NAV_ENTRIES: readonly NavEntry[] = [
     icon: Users,
     roles: [UserRole.ADMIN, UserRole.PARTNER] as readonly UserRole[],
   },
-  { to: APP_ROUTES.branchFlowReport, label: 'Sumatoria', icon: BarChart3, roles: ADMIN_ONLY },
   { to: APP_ROUTES.movementsCalc, label: 'Cálculo Movimientos', icon: Calculator },
   { to: APP_ROUTES.sucursales, label: 'Sucursales', icon: MapPin },
   {

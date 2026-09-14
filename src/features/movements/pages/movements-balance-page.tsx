@@ -417,7 +417,6 @@ function BranchSummaryCard({
     let wonPrize = 0;
     let deposits = 0;
     let withdrawals = 0;
-    let expenses = 0;
     let adjustments = 0;
     let partnerSalary = 0;
     let net = 0;
@@ -426,7 +425,6 @@ function BranchSummaryCard({
       wonPrize += r.wonPrize ?? 0;
       deposits += r.deposits ?? 0;
       withdrawals += r.withdrawals ?? 0;
-      expenses += r.expenses ?? 0;
       adjustments += r.adjustments ?? 0;
       partnerSalary += r.partnerSalary ?? 0;
       net += r.net ?? 0;
@@ -436,7 +434,6 @@ function BranchSummaryCard({
       wonPrize,
       deposits,
       withdrawals,
-      expenses,
       adjustments,
       partnerSalary,
       net,
@@ -483,11 +480,6 @@ function BranchSummaryCard({
         />
         <Stat label="Depósitos" value={totals.deposits} tone="emerald" />
         <Stat label="Retiros" value={totals.withdrawals} tone="rose" />
-        <Stat
-          label="Gastos"
-          value={totals.expenses}
-          tone="rose"
-        />
         <Stat
           label="Ajustes"
           value={totals.adjustments}
@@ -577,11 +569,6 @@ function BranchCard({
         <Stat label="Depósitos" value={row.deposits ?? 0} tone="emerald" />
         <Stat label="Retiros" value={row.withdrawals ?? 0} tone="rose" />
         <Stat
-          label="Gastos"
-          value={row.expenses ?? 0}
-          tone="rose"
-        />
-        <Stat
           label="Ajustes"
           value={row.adjustments ?? 0}
           tone={(row.adjustments ?? 0) >= 0 ? 'emerald' : 'rose'}
@@ -653,7 +640,6 @@ const MOVEMENT_LABEL: Record<string, string> = {
   [MovementType.DEPOSIT]: 'Cobro',
   [MovementType.WITHDRAWAL]: 'Ajuste de premio',
   [MovementType.ADJUSTMENT]: 'Ajuste',
-  [MovementType.EXPENSE]: 'Gasto',
   [MovementType.OPENING]: 'Apertura de caja',
   [MovementType.CLOSING]: 'Cierre de caja',
 };

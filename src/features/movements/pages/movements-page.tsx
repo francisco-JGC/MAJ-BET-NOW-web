@@ -61,11 +61,6 @@ const TYPE_META: Record<
   MovementType,
   { label: string; classes: string; icon: React.ReactNode }
 > = {
-  [MovementType.EXPENSE]: {
-    label: 'Gasto',
-    classes: 'bg-rose-500/10 text-rose-700 ring-rose-500/20',
-    icon: <ArrowDownRight className="size-3" strokeWidth={2.6} />,
-  },
   [MovementType.DEPOSIT]: {
     label: 'Depósito',
     classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
@@ -111,7 +106,6 @@ const SELLER_TYPE_META: Partial<Record<MovementType, { label: string; classes: s
 
 /** Sign for branch-level movements. */
 const TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
-  [MovementType.EXPENSE]: '-',
   [MovementType.DEPOSIT]: '+',
   [MovementType.WITHDRAWAL]: '-',
   [MovementType.OPENING]: '',
@@ -125,7 +119,6 @@ const TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
  * - Crédito (WITHDRAWAL): admin da crédito al vendedor → suma a su saldo → '+'
  */
 const SELLER_TYPE_SIGN: Record<MovementType, '+' | '-' | ''> = {
-  [MovementType.EXPENSE]: '-',
   [MovementType.DEPOSIT]: '-',
   [MovementType.WITHDRAWAL]: '+',
   [MovementType.OPENING]: '',
@@ -247,7 +240,6 @@ export function MovementsPage() {
               placeholder="Todos"
               options={[
                 { value: '', label: 'Todos los tipos' },
-                { value: MovementType.EXPENSE, label: 'Gasto' },
                 { value: MovementType.DEPOSIT, label: 'Depósito / Cobro' },
                 { value: MovementType.WITHDRAWAL, label: 'Retiro / Ajuste de premio' },
                 { value: MovementType.ADJUSTMENT, label: 'Ajuste' },
