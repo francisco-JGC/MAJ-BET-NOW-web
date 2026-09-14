@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Dices, History, Plus, Trophy } from 'lucide-react';
+import { Calendar, Dices, History, Plus, Trophy } from 'lucide-react';
 
 import { RegisterResultModal } from '@/features/draw-results/components/register-result-modal';
 import { useDrawResults } from '@/features/draw-results/hooks/use-draw-results';
@@ -15,29 +15,11 @@ import type { Game } from '@/features/games/types';
 
 const DEFAULT_LIMIT = 200;
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-const MONTH_OPTIONS = [
-  { value: '1', label: 'Enero' },
-  { value: '2', label: 'Febrero' },
-  { value: '3', label: 'Marzo' },
-  { value: '4', label: 'Abril' },
-  { value: '5', label: 'Mayo' },
-  { value: '6', label: 'Junio' },
-  { value: '7', label: 'Julio' },
-  { value: '8', label: 'Agosto' },
-  { value: '9', label: 'Septiembre' },
-  { value: '10', label: 'Octubre' },
-  { value: '11', label: 'Noviembre' },
-  { value: '12', label: 'Diciembre' },
-];
-
-function daysInMonth(month: number): number {
-  return new Date(CURRENT_YEAR, month, 0).getDate();
-}
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function LatestResultsPage() {
@@ -45,45 +27,9 @@ export function LatestResultsPage() {
   const isPartner = session?.user.role === UserRole.PARTNER;
 
   const [gameId, setGameId] = useState<string>('');
-  const [fromMonth, setFromMonth] = useState<number>(() => new Date().getMonth() + 1);
-  const [fromDay, setFromDay] = useState<number>(() => new Date().getDate());
-  const [toMonth, setToMonth] = useState<number>(() => new Date().getMonth() + 1);
-  const [toDay, setToDay] = useState<number>(() => new Date().getDate());
+  const [date, setDate] = useState<string>(() => isoDate(new Date()));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DrawResult | null>(null);
-
-  const fromDateStr = `${CURRENT_YEAR}-${pad(fromMonth)}-${pad(fromDay)}`;
-  const toDateStr = `${CURRENT_YEAR}-${pad(toMonth)}-${pad(toDay)}`;
-
-  const fromDayOptions = useMemo(
-    () =>
-      Array.from({ length: daysInMonth(fromMonth) }, (_, i) => ({
-        value: String(i + 1),
-        label: String(i + 1),
-      })),
-    [fromMonth],
-  );
-
-  const toDayOptions = useMemo(
-    () =>
-      Array.from({ length: daysInMonth(toMonth) }, (_, i) => ({
-        value: String(i + 1),
-        label: String(i + 1),
-      })),
-    [toMonth],
-  );
-
-  const handleFromMonth = (v: string) => {
-    const m = Number(v);
-    setFromMonth(m);
-    setFromDay((d) => Math.min(d, daysInMonth(m)));
-  };
-
-  const handleToMonth = (v: string) => {
-    const m = Number(v);
-    setToMonth(m);
-    setToDay((d) => Math.min(d, daysInMonth(m)));
-  };
 
   // Managua wall-clock day boundaries. Using UTC (`Z`) here dropped late
   // evening draws whose absolute instant already rolled over to the next
@@ -93,12 +39,12 @@ export function LatestResultsPage() {
   const params = useMemo(
     () => ({
       gameId: gameId || undefined,
-      from: `${fromDateStr}T00:00:00-06:00`,
-      to: endOfDayParam(toDateStr),
+      from: `${date}T00:00:00-06:00`,
+      to: endOfDayParam(date),
       limit: DEFAULT_LIMIT,
       offset: 0,
     }),
-    [gameId, fromDateStr, toDateStr],
+    [gameId, date],
   );
 
   const { data: games } = useGames();
@@ -145,7 +91,7 @@ export function LatestResultsPage() {
         </div>
       </header>
 
-      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:grid-cols-2">
         <Field label="Juego">
           <Select
             value={gameId}
@@ -159,35 +105,14 @@ export function LatestResultsPage() {
             ]}
           />
         </Field>
-        <Field label="Desde">
-          <div className="flex gap-2">
-            <Select
-              value={String(fromMonth)}
-              onChange={handleFromMonth}
-              ariaLabel="Mes desde"
-              options={MONTH_OPTIONS}
-            />
-            <Select
-              value={String(fromDay)}
-              onChange={(v) => setFromDay(Number(v))}
-              ariaLabel="Día desde"
-              options={fromDayOptions}
-            />
-          </div>
-        </Field>
-        <Field label="Hasta">
-          <div className="flex gap-2">
-            <Select
-              value={String(toMonth)}
-              onChange={handleToMonth}
-              ariaLabel="Mes hasta"
-              options={MONTH_OPTIONS}
-            />
-            <Select
-              value={String(toDay)}
-              onChange={(v) => setToDay(Number(v))}
-              ariaLabel="Día hasta"
-              options={toDayOptions}
+        <Field label="Fecha">
+          <div className="relative">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
         </Field>

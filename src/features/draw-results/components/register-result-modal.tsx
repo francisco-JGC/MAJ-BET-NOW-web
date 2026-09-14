@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Calendar,
   CalendarClock,
   Check,
   Dices,
@@ -31,8 +32,6 @@ interface Props {
   existing?: DrawResult | null;
 }
 
-const CURRENT_YEAR = new Date().getFullYear();
-
 const MONTH_OPTIONS = [
   { value: '1', label: 'Enero' },
   { value: '2', label: 'Febrero' },
@@ -49,11 +48,16 @@ const MONTH_OPTIONS = [
 ];
 
 function daysInMonth(month: number): number {
-  return new Date(CURRENT_YEAR, month, 0).getDate();
+  return new Date(new Date().getFullYear(), month, 0).getDate();
 }
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
+}
+
+function isoToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /** Parses ISO drawAt into local date+time components for pre-filling. */
@@ -79,31 +83,21 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
   const isEdit = existing != null;
 
   const [gameId, setGameId] = useState<string>('');
-  const [dateMonth, setDateMonth] = useState<number>(() => new Date().getMonth() + 1);
-  const [dateDay, setDateDay] = useState<number>(() => new Date().getDate());
+  const [date, setDate] = useState<string>(isoToday);
   const [time, setTime] = useState<string>('');
   const [winningNumber, setWinningNumber] = useState<string>('');
+  // Month/day selects used only when game type === 'date'.
+  const [winMonth, setWinMonth] = useState<number>(1);
+  const [winDay, setWinDay] = useState<number>(1);
 
-  const date = useMemo(
-    () => `${CURRENT_YEAR}-${pad(dateMonth)}-${pad(dateDay)}`,
-    [dateMonth, dateDay],
-  );
-
-  const dateDayOptions = useMemo(
+  const winDayOptions = useMemo(
     () =>
-      Array.from({ length: daysInMonth(dateMonth) }, (_, i) => ({
+      Array.from({ length: daysInMonth(winMonth) }, (_, i) => ({
         value: String(i + 1),
         label: String(i + 1),
       })),
-    [dateMonth],
+    [winMonth],
   );
-
-  const handleDateMonth = (v: string) => {
-    const m = Number(v);
-    setDateMonth(m);
-    setDateDay((d) => Math.min(d, daysInMonth(m)));
-    setTime('');
-  };
 
   const { data: games } = useGames();
   const { data: schedules } = useGameSchedules(
@@ -111,7 +105,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
   );
   // Existing results for the same game + day, to mark schedules that are
   // already registered so the admin doesn't try to insert a duplicate.
-  const shouldFetchExisting = !isEdit && gameId !== '';
+  const shouldFetchExisting = !isEdit && gameId !== '' && date !== '';
   const { data: existingResultsToday } = useDrawResults(
     {
       gameId: gameId || undefined,
@@ -133,19 +127,26 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
     setConfirmDelete(false);
     if (existing) {
       const { date: d, time: t } = splitIsoDrawAt(existing.drawAt);
-      const [, mo, dy] = d.split('-').map(Number);
       setGameId(existing.gameId);
-      setDateMonth(mo);
-      setDateDay(dy);
+      setDate(d);
       setTime(t);
       setWinningNumber(existing.winningNumber);
+      // Pre-fill month/day selects for date-type games ("DD/MM" format).
+      const match = existing.winningNumber.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (match) {
+        setWinDay(Number(match[1]));
+        setWinMonth(Number(match[2]));
+      } else {
+        setWinDay(1);
+        setWinMonth(1);
+      }
     } else {
-      const now = new Date();
       setGameId('');
-      setDateMonth(now.getMonth() + 1);
-      setDateDay(now.getDate());
+      setDate(isoToday());
       setTime('');
       setWinningNumber('');
+      setWinDay(1);
+      setWinMonth(1);
     }
   }, [open, existing]);
 
@@ -153,6 +154,12 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
     () => games?.find((g) => g.id === gameId) ?? null,
     [games, gameId],
   );
+
+  const isDateGame = selectedGame?.type === 'date';
+  // When game type is 'date', the winning number is DD/MM derived from selects.
+  const effectiveWinningNumber = isDateGame
+    ? `${pad(winDay)}/${pad(winMonth)}`
+    : winningNumber;
 
   // For CREATE mode, filter schedules by the selected date's day of week.
   const availableSchedules = useMemo(() => {
@@ -175,7 +182,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
   }, [existingResultsToday]);
 
   const canSubmit =
-    winningNumber.trim().length > 0 &&
+    effectiveWinningNumber.trim().length > 0 &&
     (isEdit || (gameId !== '' && date !== '' && time !== ''));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,7 +192,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
     if (isEdit && existing) {
       await update.mutateAsync({
         id: existing.id,
-        payload: { winningNumber: winningNumber.trim() },
+        payload: { winningNumber: effectiveWinningNumber.trim() },
       });
       onClose();
       return;
@@ -197,7 +204,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
     await create.mutateAsync({
       gameId,
       drawAt,
-      winningNumber: winningNumber.trim(),
+      winningNumber: effectiveWinningNumber.trim(),
     });
     onClose();
   };
@@ -322,23 +329,17 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
         </Field>
 
         <Field label="Fecha" required>
-          <div className="flex gap-2">
-            <Select
-              value={String(dateMonth)}
-              onChange={handleDateMonth}
-              disabled={isEdit}
-              ariaLabel="Mes"
-              options={MONTH_OPTIONS}
-            />
-            <Select
-              value={String(dateDay)}
-              onChange={(v) => {
-                setDateDay(Number(v));
+          <div className="relative">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => {
+                setDate(e.target.value);
                 setTime('');
               }}
               disabled={isEdit}
-              ariaLabel="Día"
-              options={dateDayOptions}
+              className={cn(inputClass, 'pl-9')}
             />
           </div>
         </Field>
@@ -358,27 +359,44 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
         <Field
           label="Número ganador"
           required
-          hint={
-            selectedGame
-              ? NUMBER_HINT[selectedGame.type]
-              : 'Depende del tipo de juego'
-          }
+          hint={selectedGame ? NUMBER_HINT[selectedGame.type] : 'Depende del tipo de juego'}
         >
-          <div className="relative">
-            <Trophy className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-purple-500" />
-            <input
-              type="text"
-              value={winningNumber}
-              onChange={(e) => setWinningNumber(e.target.value)}
-              maxLength={20}
-              autoFocus={isEdit}
-              placeholder="000"
-              className={cn(
-                inputClass,
-                'pl-9 pr-3 font-mono text-lg tracking-widest',
-              )}
-            />
-          </div>
+          {isDateGame ? (
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(winDay)}
+                onChange={(v) => {
+                  setWinDay(Number(v));
+                }}
+                ariaLabel="Día ganador"
+                options={winDayOptions}
+              />
+              <span className="shrink-0 font-bold text-muted-foreground">/</span>
+              <Select
+                value={String(winMonth)}
+                onChange={(v) => {
+                  const m = Number(v);
+                  setWinMonth(m);
+                  setWinDay((d) => Math.min(d, daysInMonth(m)));
+                }}
+                ariaLabel="Mes ganador"
+                options={MONTH_OPTIONS}
+              />
+            </div>
+          ) : (
+            <div className="relative">
+              <Trophy className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-purple-500" />
+              <input
+                type="text"
+                value={winningNumber}
+                onChange={(e) => setWinningNumber(e.target.value)}
+                maxLength={20}
+                autoFocus={isEdit}
+                placeholder="000"
+                className={cn(inputClass, 'pl-9 pr-3 font-mono text-lg tracking-widest')}
+              />
+            </div>
+          )}
         </Field>
 
         {(create.error || update.error || del.error) && (
