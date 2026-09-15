@@ -47,13 +47,20 @@ function generateDrawOptions(
   return options.sort((a, b) => a.value.localeCompare(b.value));
 }
 
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function BranchFlowPage() {
   const [salePointId, setSalePointId] = useState('');
   const [gameId, setGameId] = useState('');
   const [drawTime, setDrawTime] = useState('');
   const [sellerId, setSellerId] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(() => isoDate(new Date()));
+  const [to, setTo] = useState(() => isoDate(new Date()));
 
   const { data: salePoints } = useSalePoints();
   const { data: games } = useGames();
