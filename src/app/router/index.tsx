@@ -53,6 +53,11 @@ const BranchTotalsPage = lazy(() =>
     default: m.BranchTotalsPage,
   })),
 );
+const BranchFlowPage = lazy(() =>
+  import('@/features/movements/pages/branch-flow-page').then((m) => ({
+    default: m.BranchFlowPage,
+  })),
+);
 const SellerReportPage = lazy(() =>
   import('@/features/reports/pages/seller-report-page').then((m) => ({
     default: m.SellerReportPage,
@@ -193,6 +198,7 @@ const router = createBrowserRouter([
               { path: APP_ROUTES.home, element: <HomePage /> },
               { path: APP_ROUTES.sales, element: <SalesPage /> },
               { path: APP_ROUTES.branchTotals, element: <BranchTotalsPage /> },
+              { path: APP_ROUTES.branchFlowReport, element: <BranchFlowPage /> },
               { path: APP_ROUTES.sellerReport, element: <SellerReportPage /> },
               { path: APP_ROUTES.movements, element: <MovementsPage /> },
               { path: APP_ROUTES.movementsCalc, element: <MovementsBalancePage /> },

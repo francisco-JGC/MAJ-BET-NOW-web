@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
+  Activity,
   Calculator,
   ChevronDown,
   Dices,
@@ -59,6 +60,7 @@ const NAV_ENTRIES: readonly NavEntry[] = [
     roles: [UserRole.ADMIN, UserRole.PARTNER] as readonly UserRole[],
   },
   { to: APP_ROUTES.movementsCalc, label: 'Cálculo Movimientos', icon: Calculator },
+  { to: APP_ROUTES.branchFlowReport, label: 'Sumatoria', icon: Activity },
   { to: APP_ROUTES.sucursales, label: 'Sucursales', icon: MapPin },
   {
     label: 'Configuración',
