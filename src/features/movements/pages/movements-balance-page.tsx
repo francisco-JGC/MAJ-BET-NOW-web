@@ -412,8 +412,8 @@ function BranchCards({
 }
 
 const BRANCH_MOVEMENT_LABEL: Record<string, string> = {
-  [MovementType.DEPOSIT]: 'Depósito',
-  [MovementType.WITHDRAWAL]: 'Retiro',
+  [MovementType.DEPOSIT]: 'Cobro',
+  [MovementType.WITHDRAWAL]: 'Ajuste de premio',
   [MovementType.ADJUSTMENT]: 'Ajuste',
   [MovementType.OPENING]: 'Apertura',
   [MovementType.CLOSING]: 'Cierre',
@@ -560,8 +560,8 @@ function BranchSummaryCard({
           value={totals.wonPrize}
           tone="rose"
         />
-        <Stat label="Depósitos" value={totals.deposits} tone="emerald" />
-        <Stat label="Retiros" value={totals.withdrawals} tone="rose" />
+        <Stat label="Cobros" value={totals.deposits} tone="emerald" />
+        <Stat label="Ajustes de premio" value={totals.withdrawals} tone="rose" />
         <Stat
           label="Ajustes"
           value={totals.adjustments}
@@ -678,8 +678,8 @@ function BranchCard({
           value={row.wonPrize ?? 0}
           tone="rose"
         />
-        <Stat label="Depósitos" value={row.deposits ?? 0} tone="emerald" />
-        <Stat label="Retiros" value={row.withdrawals ?? 0} tone="rose" />
+        <Stat label="Cobros" value={row.deposits ?? 0} tone="emerald" />
+        <Stat label="Ajustes de premio" value={row.withdrawals ?? 0} tone="rose" />
         <Stat
           label="Ajustes"
           value={row.adjustments ?? 0}
