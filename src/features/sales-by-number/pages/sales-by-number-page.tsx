@@ -57,25 +57,18 @@ export function SalesByNumberPage() {
   const { data: games } = useGames();
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
-    limit: 200,
+    salePointId: salePointId || undefined,
+    limit: 500,
     offset: 0,
   });
 
-  // Cuando el usuario elige una sucursal, filtramos los vendedores del
-  // dropdown localmente para que solo aparezcan los de esa sucursal —
-  // el backend también aplica el filtro, pero mostrar 0 opciones cuando
-  // se elige una sucursal sin vendedores da mejor UX que un dropdown
-  // ambiguo con vendedores de otras sucursales.
   const sellerOptions = useMemo(() => {
     const all = sellersPage?.items ?? [];
-    const filtered = salePointId
-      ? all.filter((u) => u.salePointId === salePointId)
-      : all;
     return [
       { value: '', label: 'Todos los vendedores' },
-      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+      ...all.map((u) => ({ value: u.id, label: u.name })),
     ];
-  }, [sellersPage, salePointId]);
+  }, [sellersPage]);
 
   const totals = useMemo(() => {
     let totalAmount = 0;

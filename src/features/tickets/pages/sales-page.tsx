@@ -123,7 +123,7 @@ export function SalesPage() {
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
     salePointId: salePointId || undefined,
-    limit: 100,
+    limit: 500,
     offset: 0,
   });
   // Schedules for the selected game populate the "Sorteo" dropdown.

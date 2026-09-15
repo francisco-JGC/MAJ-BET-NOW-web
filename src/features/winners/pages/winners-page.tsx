@@ -115,7 +115,8 @@ export function WinnersPage() {
   const { data: salePoints } = useSalePoints();
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
-    limit: 100,
+    salePointId: salePointId || undefined,
+    limit: 500,
     offset: 0,
   });
 
@@ -125,13 +126,12 @@ export function WinnersPage() {
     return m;
   }, [games]);
   const sellerOptions = useMemo(() => {
-    const all = sellersPage?.items ?? [];
-    const filtered = salePointId ? all.filter((u) => u.isActive && u.salePointId === salePointId) : all.filter((u) => u.isActive);
+    const all = (sellersPage?.items ?? []).filter((u) => u.isActive);
     return [
       { value: '', label: 'Todos los vendedores' },
-      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+      ...all.map((u) => ({ value: u.id, label: u.name })),
     ];
-  }, [sellersPage, salePointId]);
+  }, [sellersPage]);
 
   // Filtro por folio/cliente vive server-side (ver `params.search`); acá
   // simplemente reenviamos la lista.
