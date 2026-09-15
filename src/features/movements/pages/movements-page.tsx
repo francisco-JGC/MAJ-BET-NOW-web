@@ -154,16 +154,20 @@ export function MovementsPage() {
   const total = data?.total ?? 0;
 
   const { data: salePoints } = useSalePoints();
-  const { data: sellersPage } = useUsers({ role: UserRole.SELLER, limit: 200, offset: 0 });
+  const { data: sellersPage } = useUsers({
+    role: UserRole.SELLER,
+    salePointId: salePointId || undefined,
+    limit: 500,
+    offset: 0,
+  });
 
   const sellerOptions = useMemo(() => {
-    const all = sellersPage?.items ?? [];
-    const filtered = salePointId ? all.filter((u) => u.isActive && u.salePointId === salePointId) : all.filter((u) => u.isActive);
+    const all = (sellersPage?.items ?? []).filter((u) => u.isActive);
     return [
       { value: '', label: 'Todos los vendedores' },
-      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+      ...all.map((u) => ({ value: u.id, label: u.name })),
     ];
-  }, [sellersPage, salePointId]);
+  }, [sellersPage]);
 
   const salePointById = useMemo(() => {
     const m = new Map<string, SalePoint>();

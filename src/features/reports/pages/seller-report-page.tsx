@@ -46,18 +46,18 @@ export function SellerReportPage() {
   const { data: salePoints } = useSalePoints();
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
-    limit: 100,
+    salePointId: salePointId || undefined,
+    limit: 500,
     offset: 0,
   });
 
   const sellerOptions = useMemo(() => {
     const all = sellersPage?.items ?? [];
-    const filtered = salePointId ? all.filter((u) => u.salePointId === salePointId) : all;
     return [
       { value: '', label: 'Todos los vendedores' },
-      ...filtered.map((u) => ({ value: u.id, label: u.name })),
+      ...all.map((u) => ({ value: u.id, label: u.name })),
     ];
-  }, [sellersPage, salePointId]);
+  }, [sellersPage]);
 
   const totals = useMemo(() => {
     let billed = 0;

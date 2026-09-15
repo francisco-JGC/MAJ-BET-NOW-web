@@ -67,6 +67,7 @@ export function BranchFlowPage() {
   const { data: schedules } = useGameSchedules(gameId || null);
   const { data: sellersPage } = useUsers({
     role: UserRole.SELLER,
+    salePointId: salePointId || undefined,
     limit: 500,
     offset: 0,
   });
@@ -76,13 +77,9 @@ export function BranchFlowPage() {
     [schedules],
   );
 
-  // Sellers filtered to the selected salePoint
   const sellers = useMemo(
-    () =>
-      (sellersPage?.items ?? []).filter(
-        (u) => u.isActive && (!salePointId || u.salePointId === salePointId),
-      ),
-    [sellersPage, salePointId],
+    () => (sellersPage?.items ?? []).filter((u) => u.isActive),
+    [sellersPage],
   );
 
   const params = useMemo(
