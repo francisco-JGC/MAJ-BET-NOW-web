@@ -201,6 +201,7 @@ const router = createBrowserRouter([
               { path: APP_ROUTES.sucursalConfig, element: <SucursalConfigPage /> },
               { path: APP_ROUTES.sellerQuotas, element: <SellerQuotasPage /> },
               { path: APP_ROUTES.latestResults, element: <LatestResultsPage /> },
+              { path: APP_ROUTES.winners, element: <WinnersPage /> },
               // Rutas admin-only. Un partner que pega estas URLs cae a
               // home — mismo criterio que el sidebar-nav, que también
               // las oculta a partners.
@@ -213,7 +214,6 @@ const router = createBrowserRouter([
                 ),
                 children: [
                   { path: APP_ROUTES.billing, element: <BillingPage /> },
-                  { path: APP_ROUTES.winners, element: <WinnersPage /> },
                   { path: APP_ROUTES.draws, element: <DrawsPage /> },
                   { path: APP_ROUTES.systemConfig, element: <SystemConfigPage /> },
                   { path: APP_ROUTES.salesByNumber, element: <SaleLimitsPage /> },
