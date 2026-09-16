@@ -172,6 +172,7 @@ export function GameSchedulesModal({ game, onClose }: Props) {
 
       {!isLoading && !error && (
         <div className="space-y-4">
+          <div className="overflow-x-auto">
           <div className="overflow-hidden rounded-xl border border-border">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -240,6 +241,7 @@ export function GameSchedulesModal({ game, onClose }: Props) {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
 
           {editing === null && (

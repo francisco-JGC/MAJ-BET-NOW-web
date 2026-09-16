@@ -126,6 +126,7 @@ export function WinnerDetailsModal({
           <h3 className="mb-2 text-xs font-black uppercase tracking-[0.08em] text-muted-foreground">
             Jugadas ganadoras ({winningLines.length})
           </h3>
+          <div className="overflow-x-auto">
           <div className="overflow-hidden rounded-xl border border-border">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -164,6 +165,7 @@ export function WinnerDetailsModal({
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </section>
       </div>
