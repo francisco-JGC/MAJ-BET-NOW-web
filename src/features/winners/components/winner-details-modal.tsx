@@ -126,8 +126,50 @@ export function WinnerDetailsModal({
           <h3 className="mb-2 text-xs font-black uppercase tracking-[0.08em] text-muted-foreground">
             Jugadas ganadoras ({winningLines.length})
           </h3>
-          <div className="overflow-x-auto">
-          <div className="overflow-hidden rounded-xl border border-border">
+
+          {/* Mobile: card list */}
+          <div className="sm:hidden space-y-2">
+            {winningLines.map((line, idx) => (
+              <div
+                key={idx}
+                className="rounded-xl border border-border bg-card p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="rounded-md bg-slate-900 px-2 py-0.5 font-mono text-xs font-black text-white">
+                        {line.label}
+                      </span>
+                      {line.winningNumber && (
+                        <span className="text-xs text-muted-foreground">
+                          sorteo: {line.winningNumber}
+                        </span>
+                      )}
+                    </span>
+                    {line.subGameName && (
+                      <div className="text-xs text-muted-foreground">
+                        {line.subGameName}
+                      </div>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right space-y-0.5">
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                      Ganado
+                    </div>
+                    <div className="text-sm font-bold tabular-nums text-emerald-700">
+                      {formatCurrency(line.wonPrize)}
+                    </div>
+                    <div className="text-xs tabular-nums text-muted-foreground">
+                      apostado: {formatCurrency(line.amount)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block overflow-hidden rounded-xl border border-border">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
@@ -165,7 +207,6 @@ export function WinnerDetailsModal({
                 ))}
               </tbody>
             </table>
-          </div>
           </div>
         </section>
       </div>

@@ -77,7 +77,6 @@ export function GameSchedulesModal({ game, onClose }: Props) {
   const [draft, setDraft] = useState<DraftForm>(EMPTY_DRAFT);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Reset edit state whenever we switch to a different game (or reopen).
   useEffect(() => {
     setEditing(null);
     setDraft(EMPTY_DRAFT);
@@ -140,7 +139,6 @@ export function GameSchedulesModal({ game, onClose }: Props) {
   };
 
   const sorted = [...(data ?? [])].sort((a, b) => {
-    // Daily (null) primero, luego por día, luego por hora.
     const da = a.dayOfWeek ?? -1;
     const db = b.dayOfWeek ?? -1;
     if (da !== db) return da - db;
@@ -148,6 +146,16 @@ export function GameSchedulesModal({ game, onClose }: Props) {
   });
 
   const isBusy = create.isPending || update.isPending || del.isPending;
+
+  const sharedRowProps = (s: DrawSchedule) => ({
+    confirmingDelete: confirmDeleteId === s.id,
+    onConfirmDelete: () => confirmDelete(s.id),
+    onCancelDelete: () => setConfirmDeleteId(null),
+    deleting: del.isPending && del.variables === s.id,
+    disabled:
+      (isBusy && !(del.isPending && del.variables === s.id)) ||
+      editing !== null,
+  });
 
   return (
     <Modal
@@ -172,76 +180,112 @@ export function GameSchedulesModal({ game, onClose }: Props) {
 
       {!isLoading && !error && (
         <div className="space-y-4">
-          <div className="overflow-x-auto">
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2.5">Día</th>
-                  <th className="px-4 py-2.5">Hora</th>
-                  <th className="px-4 py-2.5 text-right">Cierra antes</th>
-                  <th className="px-4 py-2.5">Estado</th>
-                  <th className="px-4 py-2.5 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {sorted.length === 0 && editing !== NEW_ROW_ID && (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-10 text-center text-sm text-muted-foreground"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <CalendarClock className="size-7 text-muted-foreground/40" />
-                        Este juego no tiene horarios configurados aún.
-                      </div>
-                    </td>
-                  </tr>
-                )}
+          {/* ── Mobile: card list ── */}
+          <div className="sm:hidden space-y-2">
+            {sorted.length === 0 && editing !== NEW_ROW_ID && (
+              <div className="flex flex-col items-center gap-2 py-8 text-sm text-muted-foreground">
+                <CalendarClock className="size-7 text-muted-foreground/40" />
+                Este juego no tiene horarios configurados aún.
+              </div>
+            )}
+            {sorted.map((s) =>
+              editing === s.id ? (
+                <MobileEditCard
+                  key={s.id}
+                  draft={draft}
+                  onChange={setDraft}
+                  onCancel={cancel}
+                  onSave={() => submitEdit(s.id)}
+                  isValid={draftValid}
+                  isPending={update.isPending}
+                  showActiveToggle
+                />
+              ) : (
+                <MobileReadCard
+                  key={s.id}
+                  schedule={s}
+                  onEdit={() => startEdit(s)}
+                  onDelete={() => setConfirmDeleteId(s.id)}
+                  {...sharedRowProps(s)}
+                />
+              ),
+            )}
+            {editing === NEW_ROW_ID && (
+              <MobileEditCard
+                draft={draft}
+                onChange={setDraft}
+                onCancel={cancel}
+                onSave={submitNew}
+                isValid={draftValid}
+                isPending={create.isPending}
+              />
+            )}
+          </div>
 
-                {sorted.map((s) =>
-                  editing === s.id ? (
+          {/* ── Desktop: table ── */}
+          <div className="hidden sm:block overflow-x-auto">
+            <div className="overflow-hidden rounded-xl border border-border">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-2.5">Día</th>
+                    <th className="px-4 py-2.5">Hora</th>
+                    <th className="px-4 py-2.5 text-right">Cierra antes</th>
+                    <th className="px-4 py-2.5">Estado</th>
+                    <th className="px-4 py-2.5 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {sorted.length === 0 && editing !== NEW_ROW_ID && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-sm text-muted-foreground"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <CalendarClock className="size-7 text-muted-foreground/40" />
+                          Este juego no tiene horarios configurados aún.
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {sorted.map((s) =>
+                    editing === s.id ? (
+                      <EditRow
+                        key={s.id}
+                        draft={draft}
+                        onChange={setDraft}
+                        onCancel={cancel}
+                        onSave={() => submitEdit(s.id)}
+                        isValid={draftValid}
+                        isPending={update.isPending}
+                        showActiveToggle
+                      />
+                    ) : (
+                      <ReadRow
+                        key={s.id}
+                        schedule={s}
+                        onEdit={() => startEdit(s)}
+                        onDelete={() => setConfirmDeleteId(s.id)}
+                        {...sharedRowProps(s)}
+                      />
+                    ),
+                  )}
+
+                  {editing === NEW_ROW_ID && (
                     <EditRow
-                      key={s.id}
                       draft={draft}
                       onChange={setDraft}
                       onCancel={cancel}
-                      onSave={() => submitEdit(s.id)}
+                      onSave={submitNew}
                       isValid={draftValid}
-                      isPending={update.isPending}
-                      showActiveToggle
+                      isPending={create.isPending}
                     />
-                  ) : (
-                    <ReadRow
-                      key={s.id}
-                      schedule={s}
-                      onEdit={() => startEdit(s)}
-                      onDelete={() => setConfirmDeleteId(s.id)}
-                      confirmingDelete={confirmDeleteId === s.id}
-                      onConfirmDelete={() => confirmDelete(s.id)}
-                      onCancelDelete={() => setConfirmDeleteId(null)}
-                      deleting={del.isPending && del.variables === s.id}
-                      disabled={
-                        (isBusy && !(del.isPending && del.variables === s.id)) ||
-                        editing !== null
-                      }
-                    />
-                  ),
-                )}
-
-                {editing === NEW_ROW_ID && (
-                  <EditRow
-                    draft={draft}
-                    onChange={setDraft}
-                    onCancel={cancel}
-                    onSave={submitNew}
-                    isValid={draftValid}
-                    isPending={create.isPending}
-                  />
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {editing === null && (
@@ -259,6 +303,257 @@ export function GameSchedulesModal({ game, onClose }: Props) {
     </Modal>
   );
 }
+
+/* ─────────────────── Mobile card components ─────────────────── */
+
+function MobileReadCard({
+  schedule,
+  onEdit,
+  onDelete,
+  confirmingDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  deleting,
+  disabled,
+}: {
+  schedule: DrawSchedule;
+  onEdit: () => void;
+  onDelete: () => void;
+  confirmingDelete: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  deleting: boolean;
+  disabled: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border border-border bg-card p-3',
+        deleting && 'opacity-60',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-1">
+          <div>
+            {schedule.dayOfWeek === null ? (
+              <span className="inline-flex items-center rounded-md bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20">
+                Todos los días
+              </span>
+            ) : (
+              <span className="text-sm font-semibold text-foreground">
+                {DAYS_OF_WEEK[schedule.dayOfWeek] ?? `Día ${schedule.dayOfWeek}`}
+              </span>
+            )}
+          </div>
+          <div className="font-mono text-base font-semibold text-foreground">
+            {formatWallClock(schedule.drawTime)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Cierra {schedule.cutoffMinutes} min antes
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset',
+              schedule.isActive
+                ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20'
+                : 'bg-slate-100 text-slate-600 ring-slate-200',
+            )}
+          >
+            {schedule.isActive ? 'Activo' : 'Pausado'}
+          </span>
+
+          {confirmingDelete ? (
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-muted-foreground">¿Eliminar?</span>
+              <button
+                type="button"
+                onClick={onConfirmDelete}
+                disabled={deleting}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md bg-rose-600 px-2 py-1 font-semibold text-white hover:bg-rose-700',
+                  deleting && 'cursor-not-allowed opacity-60',
+                )}
+              >
+                {deleting ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Check className="size-3" strokeWidth={2.6} />
+                )}
+                Sí
+              </button>
+              <button
+                type="button"
+                onClick={onCancelDelete}
+                disabled={deleting}
+                className="rounded-md px-2 py-1 font-semibold text-muted-foreground hover:bg-secondary"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={onEdit}
+                disabled={disabled}
+                aria-label="Editar horario"
+                title="Editar"
+                className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Pencil className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={disabled}
+                aria-label="Eliminar horario"
+                title="Eliminar"
+                className="flex size-8 items-center justify-center rounded-md text-rose-600 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileEditCard({
+  draft,
+  onChange,
+  onCancel,
+  onSave,
+  isValid,
+  isPending,
+  showActiveToggle = false,
+}: {
+  draft: DraftForm;
+  onChange: (next: DraftForm) => void;
+  onCancel: () => void;
+  onSave: () => void;
+  isValid: boolean;
+  isPending: boolean;
+  showActiveToggle?: boolean;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/30 bg-indigo-500/5 p-3">
+      <div className="space-y-1.5">
+        <label className="block text-xs font-semibold text-muted-foreground">
+          Día
+        </label>
+        <select
+          value={draft.dayOfWeek === null ? 'daily' : String(draft.dayOfWeek)}
+          onChange={(e) =>
+            onChange({
+              ...draft,
+              dayOfWeek:
+                e.target.value === 'daily' ? null : Number(e.target.value),
+            })
+          }
+          className={cellInputClass}
+        >
+          <option value="daily">Todos los días</option>
+          {DAYS_OF_WEEK.map((label, idx) => (
+            <option key={idx} value={idx}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-muted-foreground">
+            Hora
+          </label>
+          <input
+            type="time"
+            value={draft.drawTime}
+            onChange={(e) => onChange({ ...draft, drawTime: e.target.value })}
+            className={cn(cellInputClass, 'font-mono')}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="block text-xs font-semibold text-muted-foreground">
+            Cierra (min)
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={720}
+              value={draft.cutoffMinutes}
+              onChange={(e) =>
+                onChange({ ...draft, cutoffMinutes: e.target.value })
+              }
+              className={cn(cellInputClass, 'pr-10 tabular-nums')}
+            />
+            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+              min
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {showActiveToggle && (
+        <label className="inline-flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={draft.isActive}
+            onChange={(e) => onChange({ ...draft, isActive: e.target.checked })}
+            className="size-4 rounded border-border text-primary focus:ring-primary/30"
+          />
+          <span
+            className={cn(
+              'font-semibold',
+              draft.isActive ? 'text-emerald-700' : 'text-slate-500',
+            )}
+          >
+            {draft.isActive ? 'Activo' : 'Pausado'}
+          </span>
+        </label>
+      )}
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:bg-secondary"
+        >
+          <X className="size-4" />
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!isValid || isPending}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-white',
+            !isValid || isPending
+              ? 'cursor-not-allowed bg-emerald-300'
+              : 'bg-emerald-600 hover:bg-emerald-700',
+          )}
+        >
+          {isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Check className="size-4" strokeWidth={2.6} />
+          )}
+          Guardar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────── Desktop table row components ─────────────────── */
 
 function ReadRow({
   schedule,
