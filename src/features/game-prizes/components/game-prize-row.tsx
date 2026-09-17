@@ -152,14 +152,13 @@ export function GamePrizeRow({
   // Games without an easy default (Diaria, Fechas, Tica, etc.) don't show
   // the second input — one less field for the operator to look past.
   const showEasy = prize.easyDefault !== null;
-  // El campo "Par" se muestra si el juego tiene default configurado O si
-  // la sucursal ya tiene un override. Es config-driven — antes se
-  // hardcodeaba `slug === 'juega3'` pero eso rompía si el slug de la DB
-  // difería (`juega-3`, etc.); admin no podía ver ni configurar el campo,
-  // y todos los fácil pagaban precio regular aunque el ganador tuviera
-  // pareja. Config del juego = signal autoritativo.
+  // El campo "Par" se muestra para cualquier juego THREE_DIGIT, aunque no
+  // tenga default configurado, para que el admin pueda activar la regla por
+  // sucursal. También se muestra cuando ya hay un override activo.
   const showPair =
-    prize.pairEasyDefault !== null || prize.overridePairEasy !== null;
+    prize.gameType === 'three_digit' ||
+    prize.pairEasyDefault !== null ||
+    prize.overridePairEasy !== null;
 
   const statusBadge =
     status !== 'idle'
