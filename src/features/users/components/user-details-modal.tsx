@@ -138,6 +138,11 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     return salePoints.find((sp) => sp.id === user.salePointId)?.name ?? null;
   }, [user?.salePointId, salePoints]);
 
+  const availableTargetBranches = useMemo(
+    () => (salePoints ?? []).filter((sp) => sp.id !== user?.salePointId),
+    [salePoints, user?.salePointId],
+  );
+
   if (!user || !form) return null;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -223,11 +228,6 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
       branchName,
     });
   };
-
-  const availableTargetBranches = useMemo(
-    () => (salePoints ?? []).filter((sp) => sp.id !== user.salePointId),
-    [salePoints, user.salePointId],
-  );
 
   return (
     <Modal
