@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, Layers, Loader2, MapPin, ShieldAlert } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Layers, Loader2, MapPin, Receipt, ShieldAlert } from 'lucide-react';
 
 import { useGameSchedules, useGames } from '@/features/games/hooks/use-games';
 import {
@@ -9,6 +9,11 @@ import {
   useSaleLimitsByNumber,
   useUpsertSaleLimitByNumber,
 } from '@/features/sale-limits-by-number/hooks/use-sale-limits-by-number';
+import {
+  saleLimitsQueryKeys,
+  useSaleLimits,
+  useUpsertSaleLimit,
+} from '@/features/sale-limits/hooks/use-sale-limits';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-number';
 import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
@@ -17,6 +22,7 @@ import { Modal } from '@/shared/ui/modal';
 import { Select } from '@/shared/ui/select';
 
 import type { Game } from '@/features/games/types';
+import type { SaleLimit } from '@/features/sale-limits/types';
 import type { SaleLimitByNumber } from '@/features/sale-limits-by-number/types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -105,6 +111,7 @@ export function SaleLimitsPage() {
   const { data: limits, isLoading: loadingLimits } = useSaleLimitsByNumber(
     salePointId || null,
   );
+  const { data: saleLimits } = useSaleLimits();
   const { data: schedules } = useGameSchedules(activeGameId || null);
 
   // Sorteos activos del juego seleccionado, ordenados por hora
@@ -177,6 +184,13 @@ export function SaleLimitsPage() {
     }
     return map;
   }, [limits, activeGame]);
+
+  const activeGeneralLimit = useMemo(() => {
+    if (!salePointId || !activeGame) return undefined;
+    return (saleLimits ?? []).find(
+      (l) => l.salePointId === salePointId && l.gameId === activeGame.id,
+    );
+  }, [saleLimits, salePointId, activeGame]);
 
   const salesByLabel = useMemo(() => {
     // drawTime vacío con sorteos configurados = todos los sorteos del día
@@ -269,20 +283,162 @@ export function SaleLimitsPage() {
       {!salePointId ? (
         <EmptyState />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <>
           {activeGame && (
-            <NumbersTable
-              key={`${salePointId}-${activeGame.id}`}
-              game={activeGame}
+            <MaxPerTicketCard
               salePointId={salePointId}
-              labels={labels}
-              limitsByLabel={limitsByLabel}
-              salesByLabel={salesByLabel}
-              loading={loadingLimits}
+              gameId={activeGame.id}
+              existing={activeGeneralLimit}
             />
           )}
-        </div>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            {activeGame && (
+              <NumbersTable
+                key={`${salePointId}-${activeGame.id}`}
+                game={activeGame}
+                salePointId={salePointId}
+                labels={labels}
+                limitsByLabel={limitsByLabel}
+                salesByLabel={salesByLabel}
+                loading={loadingLimits}
+              />
+            )}
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+// ─── MaxPerTicketCard ─────────────────────────────────────────────────────────
+
+function MaxPerTicketCard({
+  salePointId,
+  gameId,
+  existing,
+}: {
+  salePointId: string;
+  gameId: string;
+  existing: SaleLimit | undefined;
+}) {
+  const [draft, setDraft] = useState(
+    existing?.maxPerTicket != null ? String(existing.maxPerTicket) : '',
+  );
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const savedTimer = useRef<number | null>(null);
+  const upsert = useUpsertSaleLimit();
+
+  // Sync when external data changes (e.g. background refetch)
+  useEffect(() => {
+    if (status === 'idle') {
+      setDraft(existing?.maxPerTicket != null ? String(existing.maxPerTicket) : '');
+    }
+  }, [existing?.maxPerTicket, status]);
+
+  useEffect(() => {
+    if (status !== 'saved') return;
+    savedTimer.current = window.setTimeout(() => setStatus('idle'), 1500);
+    return () => { if (savedTimer.current) window.clearTimeout(savedTimer.current); };
+  }, [status]);
+
+  const persist = async () => {
+    const trimmed = draft.trim();
+    const parsed = trimmed === '' ? null : Number(trimmed);
+    const next: number | null =
+      parsed === null || (Number.isInteger(parsed) && parsed > 0) ? parsed : existing?.maxPerTicket ?? null;
+
+    // No change
+    if (next === (existing?.maxPerTicket ?? null)) return;
+
+    // maxPerTicket requires an existing general limit (amount). If none exists,
+    // we can't upsert without an amount — show a hint.
+    if (!existing) {
+      // Can't set maxPerTicket without a general limit configured first.
+      setDraft('');
+      return;
+    }
+
+    setStatus('saving');
+    try {
+      await upsert.mutateAsync({
+        salePointId,
+        gameId,
+        amount: existing.amount,
+        maxPerTicket: next,
+      });
+      setStatus('saved');
+    } catch {
+      setStatus('idle');
+    }
+  };
+
+  const isDirty =
+    (existing?.maxPerTicket != null ? String(existing.maxPerTicket) : '') !== draft.trim();
+
+  const noGeneralLimit = !existing;
+
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card px-5 py-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+          <Receipt className="size-3.5" strokeWidth={2.4} />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">Máx. por boleto</p>
+          <p className="text-[11px] text-muted-foreground">
+            {noGeneralLimit
+              ? 'Configurá primero el tope general del juego en Configuración → Sucursal'
+              : existing.maxPerTicket != null
+              ? `Activo: ${formatCurrency(existing.maxPerTicket)} por línea`
+              : 'Sin límite por boleto'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            C$ por línea
+          </span>
+          <div className="relative w-32">
+            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+              C$
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              disabled={noGeneralLimit}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={persist}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+                if (e.key === 'Escape') {
+                  setDraft(existing?.maxPerTicket != null ? String(existing.maxPerTicket) : '');
+                  e.currentTarget.blur();
+                }
+              }}
+              placeholder="Sin límite"
+              className={cn(
+                'w-full rounded-md border bg-background py-1.5 pl-9 pr-2 text-right text-sm tabular-nums transition',
+                'placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:text-xs',
+                'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary',
+                'disabled:cursor-not-allowed disabled:opacity-50',
+                existing?.maxPerTicket != null && !isDirty
+                  ? 'border-indigo-200 bg-indigo-50/50 font-semibold text-indigo-900'
+                  : 'border-border',
+                isDirty && status === 'idle' && 'border-purple-300 bg-purple-50/50',
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="flex size-7 items-center justify-center mt-4">
+          {status === 'saving' && <Loader2 className="size-4 animate-spin text-primary" />}
+          {status === 'saved' && <Check className="size-4 text-emerald-600" strokeWidth={2.8} />}
+        </div>
+      </div>
     </div>
   );
 }
