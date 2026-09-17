@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
+  ArrowRightLeft,
   Eye,
   EyeOff,
   Loader2,
@@ -15,7 +17,7 @@ import {
 
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
-import { useUpdateUser } from '@/features/users/hooks/use-users';
+import { useTransferSellerBranch, useUpdateUser } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
 import { generatePassword } from '@/shared/lib/password';
 import { Modal } from '@/shared/ui/modal';
@@ -61,19 +63,25 @@ function stateFromUser(user: User): FormState {
 
 export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
   const session = useSession();
-  const canEditRole = session?.user.role === UserRole.ADMIN;
+  const isAdmin = session?.user.role === UserRole.ADMIN;
+  const canEditRole = isAdmin;
 
   const [editing, setEditing] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [newSalePointId, setNewSalePointId] = useState('');
   const [form, setForm] = useState<FormState | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { data: salePoints } = useSalePoints();
   const { mutateAsync, isPending, error, reset } = useUpdateUser();
+  const transferMutation = useTransferSellerBranch();
 
   // Reset every time we open or the user changes.
   useEffect(() => {
     if (open && user) {
       setForm(stateFromUser(user));
       setEditing(!!startEditing);
+      setTransferring(false);
+      setNewSalePointId('');
       setShowPassword(false);
       reset();
     }
@@ -157,19 +165,76 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     });
   };
 
+  const handleTransfer = async () => {
+    if (!newSalePointId || transferMutation.isPending) return;
+    const branchName =
+      salePoints?.find((sp) => sp.id === newSalePointId)?.name ?? newSalePointId;
+    await transferMutation.mutateAsync({
+      userId: user.id,
+      newSalePointId,
+      sellerName: user.name,
+      branchName,
+    });
+    setTransferring(false);
+    setNewSalePointId('');
+    onClose();
+  };
+
+  const availableTargetBranches = useMemo(
+    () => (salePoints ?? []).filter((sp) => sp.id !== user.salePointId),
+    [salePoints, user.salePointId],
+  );
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? 'Editar usuario' : 'Detalles del usuario'}
+      title={
+        transferring
+          ? 'Transferir a otra sucursal'
+          : editing
+            ? 'Editar usuario'
+            : 'Detalles del usuario'
+      }
       description={
-        editing
-          ? 'Los campos vacíos no modifican el valor actual.'
-          : undefined
+        transferring
+          ? `Selecciona la nueva sucursal para ${user.name}. Se moverán todos sus tickets y movimientos.`
+          : editing
+            ? 'Los campos vacíos no modifican el valor actual.'
+            : undefined
       }
       size="max-w-3xl"
       footer={
-        editing ? (
+        transferring ? (
+          <>
+            <button
+              type="button"
+              onClick={() => { setTransferring(false); setNewSalePointId(''); }}
+              disabled={transferMutation.isPending}
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleTransfer}
+              disabled={!newSalePointId || transferMutation.isPending}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white transition',
+                (!newSalePointId || transferMutation.isPending)
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'hover:bg-amber-700',
+              )}
+            >
+              {transferMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="size-4" strokeWidth={2.4} />
+              )}
+              Confirmar transferencia
+            </button>
+          </>
+        ) : editing ? (
           <>
             <button
               type="button"
@@ -225,6 +290,16 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
               )}
               {user.isActive ? 'Bloquear acceso' : 'Reactivar acceso'}
             </button>
+            {isAdmin && user.role === UserRole.SELLER && (
+              <button
+                type="button"
+                onClick={() => setTransferring(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary"
+              >
+                <ArrowRightLeft className="size-4" strokeWidth={2.4} />
+                Transferir sucursal
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setEditing(true)}
@@ -245,7 +320,44 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
         </div>
       )}
 
-      {editing ? (
+      {transferring ? (
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" strokeWidth={2.4} />
+              <div className="text-sm text-amber-900 dark:text-amber-200">
+                <strong>Esta acción es permanente.</strong> Todos los tickets y movimientos de{' '}
+                <strong>{user.name}</strong> quedarán registrados bajo la nueva sucursal. Solo un administrador puede revertirlo.
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold text-foreground">
+              Sucursal de destino <span className="text-destructive">*</span>
+            </label>
+            <Select
+              value={newSalePointId}
+              onChange={setNewSalePointId}
+              leadingIcon={<MapPin className="size-4" />}
+              placeholder="Selecciona una sucursal"
+              options={availableTargetBranches.map((sp) => ({
+                value: sp.id,
+                label: sp.name,
+              }))}
+            />
+            {user.salePointId && salePointName && (
+              <p className="text-xs text-muted-foreground">
+                Sucursal actual: <strong>{salePointName}</strong>
+              </p>
+            )}
+          </div>
+          {transferMutation.error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {transferMutation.error.message}
+            </div>
+          )}
+        </div>
+      ) : editing ? (
         <EditForm
           form={form}
           onChange={set}

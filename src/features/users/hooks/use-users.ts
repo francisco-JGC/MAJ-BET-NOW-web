@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   createUser,
   listUsers,
+  transferSellerBranch,
   updateUser,
 } from '@/features/users/api/users.api';
 import { toApiError } from '@/shared/api/error-mapper';
@@ -91,6 +92,34 @@ export function useUpdateUser() {
     },
     onError: (error) => {
       toast.error('No se pudieron guardar los cambios', {
+        description: error.message,
+      });
+    },
+  });
+}
+
+export function useTransferSellerBranch() {
+  const qc = useQueryClient();
+  return useMutation<
+    User,
+    ApiError,
+    { userId: string; newSalePointId: string; sellerName: string; branchName: string }
+  >({
+    mutationFn: async ({ userId, newSalePointId }) => {
+      try {
+        return await transferSellerBranch(userId, newSalePointId);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    onSuccess: (_user, variables) => {
+      toast.success(
+        `${variables.sellerName} transferido a ${variables.branchName}`,
+      );
+      qc.invalidateQueries({ queryKey: usersQueryKeys.all });
+    },
+    onError: (error) => {
+      toast.error('No se pudo transferir al vendedor', {
         description: error.message,
       });
     },

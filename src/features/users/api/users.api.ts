@@ -36,6 +36,16 @@ export async function updateUser(
   return data;
 }
 
+export async function transferSellerBranch(
+  userId: string,
+  newSalePointId: string,
+): Promise<User> {
+  const { data } = await http.post<User>(`/users/${userId}/transfer-branch`, {
+    newSalePointId,
+  });
+  return data;
+}
+
 /**
  * Configura el "Modo vendedor" del admin logueado. El backend valida
  * que quien llama sea admin y que — si activa el modo — la sucursal
