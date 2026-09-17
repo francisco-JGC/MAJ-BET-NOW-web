@@ -17,7 +17,11 @@ import {
 
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
-import { useTransferSellerBranch, useUpdateUser } from '@/features/users/hooks/use-users';
+import {
+  useTransferPreview,
+  useTransferSellerBranch,
+  useUpdateUser,
+} from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
 import { generatePassword } from '@/shared/lib/password';
 import { Modal } from '@/shared/ui/modal';
@@ -67,25 +71,67 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
   const canEditRole = isAdmin;
 
   const [editing, setEditing] = useState(false);
-  const [transferring, setTransferring] = useState(false);
+  const [transferMode, setTransferMode] = useState<'idle' | 'select' | 'executing'>('idle');
   const [newSalePointId, setNewSalePointId] = useState('');
+  const [txProgress, setTxProgress] = useState(0);
+  const [txPhase, setTxPhase] = useState('');
   const [form, setForm] = useState<FormState | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { data: salePoints } = useSalePoints();
   const { mutateAsync, isPending, error, reset } = useUpdateUser();
   const transferMutation = useTransferSellerBranch();
+  const { data: preview, isFetching: previewFetching } = useTransferPreview(
+    user?.id ?? '',
+    newSalePointId,
+    !!(user && newSalePointId && transferMode === 'select'),
+  );
 
   // Reset every time we open or the user changes.
   useEffect(() => {
     if (open && user) {
       setForm(stateFromUser(user));
       setEditing(!!startEditing);
-      setTransferring(false);
+      setTransferMode('idle');
       setNewSalePointId('');
+      setTxProgress(0);
+      setTxPhase('');
       setShowPassword(false);
       reset();
     }
   }, [open, user, reset, startEditing]);
+
+  // Animate progress bar while executing the transfer.
+  useEffect(() => {
+    if (transferMode !== 'executing') return;
+
+    const ticketCount = preview?.ticketCount ?? 0;
+    const movementCount = preview?.movementCount ?? 0;
+    const ticketMs = Math.min(Math.max(ticketCount * 4, 800), 10_000);
+    const movementMs = Math.min(Math.max(movementCount * 8, 400), 4_000);
+
+    setTxProgress(0);
+    setTxPhase('Iniciando transferencia...');
+
+    const t1 = setTimeout(() => { setTxProgress(8); setTxPhase('Actualizando datos del vendedor...'); }, 200);
+    const t2 = setTimeout(() => { setTxProgress(15); setTxPhase(`Transfiriendo tickets (${ticketCount.toLocaleString()} registros)...`); }, 500);
+    const t3 = setTimeout(() => { setTxProgress(72); setTxPhase(`Transfiriendo movimientos (${movementCount.toLocaleString()} registros)...`); }, 500 + ticketMs);
+    const t4 = setTimeout(() => { setTxProgress(88); setTxPhase('Finalizando...'); }, 500 + ticketMs + movementMs);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [transferMode, preview?.ticketCount, preview?.movementCount]);
+
+  // When mutation completes, finish the animation then close.
+  useEffect(() => {
+    if (!transferMutation.isSuccess || transferMode !== 'executing') return;
+    setTxProgress(100);
+    setTxPhase('¡Transferencia completada!');
+    const t = setTimeout(() => {
+      setTransferMode('idle');
+      setNewSalePointId('');
+      onClose();
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [transferMutation.isSuccess, transferMode, onClose]);
 
   const salePointName = useMemo(() => {
     if (!user?.salePointId || !salePoints) return null;
@@ -165,19 +211,17 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     });
   };
 
-  const handleTransfer = async () => {
+  const handleConfirmTransfer = () => {
     if (!newSalePointId || transferMutation.isPending) return;
     const branchName =
       salePoints?.find((sp) => sp.id === newSalePointId)?.name ?? newSalePointId;
-    await transferMutation.mutateAsync({
+    setTransferMode('executing');
+    transferMutation.mutate({
       userId: user.id,
       newSalePointId,
       sellerName: user.name,
       branchName,
     });
-    setTransferring(false);
-    setNewSalePointId('');
-    onClose();
   };
 
   const availableTargetBranches = useMemo(
@@ -190,43 +234,44 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
       open={open}
       onClose={onClose}
       title={
-        transferring
+        transferMode !== 'idle'
           ? 'Transferir a otra sucursal'
           : editing
             ? 'Editar usuario'
             : 'Detalles del usuario'
       }
       description={
-        transferring
+        transferMode === 'select'
           ? `Selecciona la nueva sucursal para ${user.name}. Se moverán todos sus tickets y movimientos.`
-          : editing
-            ? 'Los campos vacíos no modifican el valor actual.'
-            : undefined
+          : transferMode === 'executing'
+            ? undefined
+            : editing
+              ? 'Los campos vacíos no modifican el valor actual.'
+              : undefined
       }
       size="max-w-3xl"
       footer={
-        transferring ? (
+        transferMode === 'executing' ? null : transferMode === 'select' ? (
           <>
             <button
               type="button"
-              onClick={() => { setTransferring(false); setNewSalePointId(''); }}
-              disabled={transferMutation.isPending}
+              onClick={() => { setTransferMode('idle'); setNewSalePointId(''); }}
               className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary"
             >
               Cancelar
             </button>
             <button
               type="button"
-              onClick={handleTransfer}
-              disabled={!newSalePointId || transferMutation.isPending}
+              onClick={handleConfirmTransfer}
+              disabled={!newSalePointId || previewFetching || !preview}
               className={cn(
                 'inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white transition',
-                (!newSalePointId || transferMutation.isPending)
+                (!newSalePointId || previewFetching || !preview)
                   ? 'cursor-not-allowed opacity-60'
                   : 'hover:bg-amber-700',
               )}
             >
-              {transferMutation.isPending ? (
+              {previewFetching ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <ArrowRightLeft className="size-4" strokeWidth={2.4} />
@@ -293,7 +338,7 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
             {isAdmin && user.role === UserRole.SELLER && (
               <button
                 type="button"
-                onClick={() => setTransferring(true)}
+                onClick={() => setTransferMode('select')}
                 className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary"
               >
                 <ArrowRightLeft className="size-4" strokeWidth={2.4} />
@@ -320,7 +365,33 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
         </div>
       )}
 
-      {transferring ? (
+      {transferMode === 'executing' ? (
+        <div className="mt-4 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-foreground">{txPhase}</span>
+              <span className="tabular-nums text-muted-foreground">{txProgress}%</span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 ease-out"
+                style={{ width: `${txProgress}%` }}
+              />
+            </div>
+          </div>
+          {preview && (
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span>Tickets: <strong className="text-foreground">{preview.ticketCount.toLocaleString()}</strong></span>
+              <span>Movimientos: <strong className="text-foreground">{preview.movementCount.toLocaleString()}</strong></span>
+            </div>
+          )}
+          {transferMutation.isError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {transferMutation.error?.message}
+            </div>
+          )}
+        </div>
+      ) : transferMode === 'select' ? (
         <div className="mt-4 space-y-4">
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
             <div className="flex items-start gap-3">
@@ -351,6 +422,29 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
               </p>
             )}
           </div>
+          {preview && !previewFetching && (
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                Registros a transferir
+              </p>
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <span className="text-2xl font-black text-foreground">{preview.ticketCount.toLocaleString()}</span>
+                  <span className="ml-1.5 text-muted-foreground">tickets</span>
+                </div>
+                <div>
+                  <span className="text-2xl font-black text-foreground">{preview.movementCount.toLocaleString()}</span>
+                  <span className="ml-1.5 text-muted-foreground">movimientos</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {previewFetching && newSalePointId && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Calculando registros a transferir...
+            </div>
+          )}
           {transferMutation.error && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {transferMutation.error.message}
@@ -367,9 +461,9 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
           onTogglePassword={() => setShowPassword((v) => !v)}
           onGenerate={handleGenerate}
         />
-      ) : (
+      ) : transferMode === 'idle' ? (
         <DetailsGrid user={user} salePointName={salePointName} />
-      )}
+      ) : null}
     </Modal>
   );
 }

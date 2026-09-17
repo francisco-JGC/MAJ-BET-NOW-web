@@ -3,9 +3,12 @@ import { toast } from 'sonner';
 
 import {
   createUser,
+  fetchTransferPreview,
   listUsers,
   transferSellerBranch,
   updateUser,
+  type TransferPreview,
+  type TransferResult,
 } from '@/features/users/api/users.api';
 import { toApiError } from '@/shared/api/error-mapper';
 
@@ -98,10 +101,29 @@ export function useUpdateUser() {
   });
 }
 
+export function useTransferPreview(
+  userId: string,
+  newSalePointId: string,
+  enabled: boolean,
+) {
+  return useQuery<TransferPreview, ApiError>({
+    queryKey: ['transfer-preview', userId, newSalePointId],
+    queryFn: async () => {
+      try {
+        return await fetchTransferPreview(userId, newSalePointId);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
 export function useTransferSellerBranch() {
   const qc = useQueryClient();
   return useMutation<
-    User,
+    TransferResult,
     ApiError,
     { userId: string; newSalePointId: string; sellerName: string; branchName: string }
   >({
@@ -112,9 +134,12 @@ export function useTransferSellerBranch() {
         throw toApiError(error);
       }
     },
-    onSuccess: (_user, variables) => {
+    onSuccess: (result, variables) => {
       toast.success(
         `${variables.sellerName} transferido a ${variables.branchName}`,
+        {
+          description: `${result.ticketsMoved} tickets y ${result.movementsMoved} movimientos transferidos`,
+        },
       );
       qc.invalidateQueries({ queryKey: usersQueryKeys.all });
     },
