@@ -10,7 +10,6 @@ import {
   useUpsertSaleLimitByNumber,
 } from '@/features/sale-limits-by-number/hooks/use-sale-limits-by-number';
 import {
-  saleLimitsQueryKeys,
   useSaleLimits,
   useUpsertSaleLimit,
 } from '@/features/sale-limits/hooks/use-sale-limits';
