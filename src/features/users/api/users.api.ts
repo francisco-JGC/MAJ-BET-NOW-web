@@ -69,6 +69,20 @@ export async function transferSellerBranch(
   return data;
 }
 
+export async function fetchSyncPreview(userId: string): Promise<TransferPreview> {
+  const { data } = await http.get<TransferPreview>(
+    `/users/${userId}/sync-branch/preview`,
+  );
+  return data;
+}
+
+export async function syncSellerBranch(userId: string): Promise<TransferResult> {
+  const { data } = await http.post<TransferResult>(
+    `/users/${userId}/sync-branch`,
+  );
+  return data;
+}
+
 /**
  * Configura el "Modo vendedor" del admin logueado. El backend valida
  * que quien llama sea admin y que — si activa el modo — la sucursal

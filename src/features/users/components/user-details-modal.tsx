@@ -8,6 +8,7 @@ import {
   Lock,
   MapPin,
   Pencil,
+  RefreshCw,
   Save,
   ShieldCheck,
   Sparkles,
@@ -18,6 +19,8 @@ import {
 import { useSession } from '@/features/auth/hooks/use-session';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import {
+  useSyncPreview,
+  useSyncSellerBranch,
   useTransferPreview,
   useTransferSellerBranch,
   useUpdateUser,
@@ -71,7 +74,7 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
   const canEditRole = isAdmin;
 
   const [editing, setEditing] = useState(false);
-  const [transferMode, setTransferMode] = useState<'idle' | 'select' | 'executing'>('idle');
+  const [transferMode, setTransferMode] = useState<'idle' | 'select' | 'executing' | 'sync-confirm' | 'sync-executing'>('idle');
   const [newSalePointId, setNewSalePointId] = useState('');
   const [txProgress, setTxProgress] = useState(0);
   const [txPhase, setTxPhase] = useState('');
@@ -80,10 +83,15 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
   const { data: salePoints } = useSalePoints();
   const { mutateAsync, isPending, error, reset } = useUpdateUser();
   const transferMutation = useTransferSellerBranch();
+  const syncMutation = useSyncSellerBranch();
   const { data: preview, isFetching: previewFetching } = useTransferPreview(
     user?.id ?? '',
     newSalePointId,
     !!(user && newSalePointId && transferMode === 'select'),
+  );
+  const { data: syncPreview, isFetching: syncPreviewFetching } = useSyncPreview(
+    user?.id ?? '',
+    !!(user && transferMode === 'sync-confirm'),
   );
 
   // Reset every time we open or the user changes.
@@ -100,27 +108,30 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     }
   }, [open, user, reset, startEditing]);
 
-  // Animate progress bar while executing the transfer.
+  // Animate progress bar while executing a transfer or sync.
   useEffect(() => {
-    if (transferMode !== 'executing') return;
+    const isRunning = transferMode === 'executing' || transferMode === 'sync-executing';
+    if (!isRunning) return;
 
-    const ticketCount = preview?.ticketCount ?? 0;
-    const movementCount = preview?.movementCount ?? 0;
+    const activePreview = transferMode === 'sync-executing' ? syncPreview : preview;
+    const ticketCount = activePreview?.ticketCount ?? 0;
+    const movementCount = activePreview?.movementCount ?? 0;
     const ticketMs = Math.min(Math.max(ticketCount * 4, 800), 10_000);
     const movementMs = Math.min(Math.max(movementCount * 8, 400), 4_000);
+    const verb = transferMode === 'sync-executing' ? 'Sincronizando' : 'Transfiriendo';
 
     setTxProgress(0);
-    setTxPhase('Iniciando transferencia...');
+    setTxPhase('Iniciando...');
 
     const t1 = setTimeout(() => { setTxProgress(8); setTxPhase('Actualizando datos del vendedor...'); }, 200);
-    const t2 = setTimeout(() => { setTxProgress(15); setTxPhase(`Transfiriendo tickets (${ticketCount.toLocaleString()} registros)...`); }, 500);
-    const t3 = setTimeout(() => { setTxProgress(72); setTxPhase(`Transfiriendo movimientos (${movementCount.toLocaleString()} registros)...`); }, 500 + ticketMs);
+    const t2 = setTimeout(() => { setTxProgress(15); setTxPhase(`${verb} tickets (${ticketCount.toLocaleString()} registros)...`); }, 500);
+    const t3 = setTimeout(() => { setTxProgress(72); setTxPhase(`${verb} movimientos (${movementCount.toLocaleString()} registros)...`); }, 500 + ticketMs);
     const t4 = setTimeout(() => { setTxProgress(88); setTxPhase('Finalizando...'); }, 500 + ticketMs + movementMs);
 
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-  }, [transferMode, preview?.ticketCount, preview?.movementCount]);
+  }, [transferMode, preview?.ticketCount, preview?.movementCount, syncPreview?.ticketCount, syncPreview?.movementCount]);
 
-  // When mutation completes, finish the animation then close.
+  // When transfer mutation completes, finish animation then close.
   useEffect(() => {
     if (!transferMutation.isSuccess || transferMode !== 'executing') return;
     setTxProgress(100);
@@ -132,6 +143,18 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     }, 1500);
     return () => clearTimeout(t);
   }, [transferMutation.isSuccess, transferMode, onClose]);
+
+  // When sync mutation completes, finish animation then close.
+  useEffect(() => {
+    if (!syncMutation.isSuccess || transferMode !== 'sync-executing') return;
+    setTxProgress(100);
+    setTxPhase('¡Sincronización completada!');
+    const t = setTimeout(() => {
+      setTransferMode('idle');
+      onClose();
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [syncMutation.isSuccess, transferMode, onClose]);
 
   const salePointName = useMemo(() => {
     if (!user?.salePointId || !salePoints) return null;
@@ -229,29 +252,41 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
     });
   };
 
+  const handleConfirmSync = () => {
+    if (syncMutation.isPending) return;
+    const branchName = salePointName ?? user.salePointId ?? '';
+    setTransferMode('sync-executing');
+    syncMutation.mutate({ userId: user.id, sellerName: user.name, branchName });
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={
-        transferMode !== 'idle'
+        transferMode === 'select' || transferMode === 'executing'
           ? 'Transferir a otra sucursal'
-          : editing
-            ? 'Editar usuario'
-            : 'Detalles del usuario'
+          : transferMode === 'sync-confirm' || transferMode === 'sync-executing'
+            ? 'Sincronizar datos'
+            : editing
+              ? 'Editar usuario'
+              : 'Detalles del usuario'
       }
       description={
         transferMode === 'select'
           ? `Selecciona la nueva sucursal para ${user.name}. Se moverán todos sus tickets y movimientos.`
-          : transferMode === 'executing'
-            ? undefined
-            : editing
-              ? 'Los campos vacíos no modifican el valor actual.'
-              : undefined
+          : transferMode === 'sync-confirm'
+            ? `Sincroniza los tickets y movimientos de ${user.name} a su sucursal actual.`
+            : transferMode === 'executing' || transferMode === 'sync-executing'
+              ? undefined
+              : editing
+                ? 'Los campos vacíos no modifican el valor actual.'
+                : undefined
       }
       size="max-w-3xl"
       footer={
-        transferMode === 'executing' ? null : transferMode === 'select' ? (
+        transferMode === 'executing' || transferMode === 'sync-executing' ? null
+        : transferMode === 'select' ? (
           <>
             <button
               type="button"
@@ -277,6 +312,34 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
                 <ArrowRightLeft className="size-4" strokeWidth={2.4} />
               )}
               Confirmar transferencia
+            </button>
+          </>
+        ) : transferMode === 'sync-confirm' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setTransferMode('idle')}
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSync}
+              disabled={syncPreviewFetching || !syncPreview}
+              className={cn(
+                'inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition',
+                (syncPreviewFetching || !syncPreview)
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'hover:bg-indigo-700',
+              )}
+            >
+              {syncPreviewFetching ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" strokeWidth={2.4} />
+              )}
+              Confirmar sincronización
             </button>
           </>
         ) : editing ? (
@@ -335,6 +398,16 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
               )}
               {user.isActive ? 'Bloquear acceso' : 'Reactivar acceso'}
             </button>
+            {isAdmin && user.role === UserRole.SELLER && user.salePointId && (
+              <button
+                type="button"
+                onClick={() => setTransferMode('sync-confirm')}
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground hover:bg-secondary"
+              >
+                <RefreshCw className="size-4" strokeWidth={2.4} />
+                Sincronizar datos
+              </button>
+            )}
             {isAdmin && user.role === UserRole.SELLER && (
               <button
                 type="button"
@@ -365,7 +438,7 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
         </div>
       )}
 
-      {transferMode === 'executing' ? (
+      {transferMode === 'executing' || transferMode === 'sync-executing' ? (
         <div className="mt-4 space-y-5">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -379,15 +452,57 @@ export function UserDetailsModal({ open, onClose, user, startEditing }: Props) {
               />
             </div>
           </div>
-          {preview && (
+          {(transferMode === 'executing' ? preview : syncPreview) && (
             <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>Tickets: <strong className="text-foreground">{preview.ticketCount.toLocaleString()}</strong></span>
-              <span>Movimientos: <strong className="text-foreground">{preview.movementCount.toLocaleString()}</strong></span>
+              <span>Tickets: <strong className="text-foreground">{(transferMode === 'executing' ? preview : syncPreview)!.ticketCount.toLocaleString()}</strong></span>
+              <span>Movimientos: <strong className="text-foreground">{(transferMode === 'executing' ? preview : syncPreview)!.movementCount.toLocaleString()}</strong></span>
             </div>
           )}
-          {transferMutation.isError && (
+          {(transferMode === 'executing' ? transferMutation : syncMutation).isError && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {transferMutation.error?.message}
+              {(transferMode === 'executing' ? transferMutation : syncMutation).error?.message}
+            </div>
+          )}
+        </div>
+      ) : transferMode === 'sync-confirm' ? (
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <RefreshCw className="mt-0.5 size-4 shrink-0 text-indigo-600" strokeWidth={2.4} />
+              <div className="text-sm text-indigo-900 dark:text-indigo-200">
+                Se moverán todos los tickets y movimientos de <strong>{user.name}</strong> que
+                no estén registrados bajo <strong>{salePointName ?? 'su sucursal actual'}</strong>.
+              </div>
+            </div>
+          </div>
+          {syncPreview && !syncPreviewFetching ? (
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                Registros fuera de sincronía
+              </p>
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <span className="text-2xl font-black text-foreground">{syncPreview.ticketCount.toLocaleString()}</span>
+                  <span className="ml-1.5 text-muted-foreground">tickets</span>
+                </div>
+                <div>
+                  <span className="text-2xl font-black text-foreground">{syncPreview.movementCount.toLocaleString()}</span>
+                  <span className="ml-1.5 text-muted-foreground">movimientos</span>
+                </div>
+              </div>
+              {syncPreview.ticketCount === 0 && syncPreview.movementCount === 0 && (
+                <p className="mt-2 text-sm text-emerald-700">Todo está sincronizado. No hay registros que mover.</p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Calculando registros fuera de sincronía...
+            </div>
+          )}
+          {syncMutation.error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {syncMutation.error.message}
             </div>
           )}
         </div>

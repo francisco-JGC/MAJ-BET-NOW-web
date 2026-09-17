@@ -3,8 +3,10 @@ import { toast } from 'sonner';
 
 import {
   createUser,
+  fetchSyncPreview,
   fetchTransferPreview,
   listUsers,
+  syncSellerBranch,
   transferSellerBranch,
   updateUser,
   type TransferPreview,
@@ -117,6 +119,45 @@ export function useTransferPreview(
     },
     enabled,
     staleTime: 30_000,
+  });
+}
+
+export function useSyncPreview(userId: string, enabled: boolean) {
+  return useQuery<TransferPreview, ApiError>({
+    queryKey: ['sync-preview', userId],
+    queryFn: async () => {
+      try {
+        return await fetchSyncPreview(userId);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useSyncSellerBranch() {
+  const qc = useQueryClient();
+  return useMutation<TransferResult, ApiError, { userId: string; sellerName: string; branchName: string }>({
+    mutationFn: async ({ userId }) => {
+      try {
+        return await syncSellerBranch(userId);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+    onSuccess: (result, variables) => {
+      toast.success(`Datos de ${variables.sellerName} sincronizados a ${variables.branchName}`, {
+        description: `${result.ticketsMoved} tickets y ${result.movementsMoved} movimientos actualizados`,
+      });
+      qc.invalidateQueries({ queryKey: usersQueryKeys.all });
+    },
+    onError: (error) => {
+      toast.error('No se pudo sincronizar los datos', {
+        description: error.message,
+      });
+    },
   });
 }
 
