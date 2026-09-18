@@ -47,10 +47,6 @@ const MONTH_OPTIONS = [
   { value: '12', label: 'Diciembre' },
 ];
 
-function daysInMonth(month: number): number {
-  return new Date(new Date().getFullYear(), month, 0).getDate();
-}
-
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -92,11 +88,11 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
 
   const winDayOptions = useMemo(
     () =>
-      Array.from({ length: daysInMonth(winMonth) }, (_, i) => ({
+      Array.from({ length: 31 }, (_, i) => ({
         value: String(i + 1),
         label: String(i + 1),
       })),
-    [winMonth],
+    [],
   );
 
   const { data: games } = useGames();
@@ -366,9 +362,7 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
               <Select
                 value={String(winMonth)}
                 onChange={(v) => {
-                  const m = Number(v);
-                  setWinMonth(m);
-                  setWinDay((d) => Math.min(d, daysInMonth(m)));
+                  setWinMonth(Number(v));
                 }}
                 ariaLabel="Mes ganador"
                 options={MONTH_OPTIONS}
