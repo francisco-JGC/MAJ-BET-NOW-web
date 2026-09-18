@@ -30,7 +30,10 @@ const PAGE_SIZE = 100;
 
 const MONTHS_ABBR = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'] as const;
 const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] as const;
-const DAYS_PER_MONTH = [31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31] as const;
+function daysInMonth(monthIndex: number): number {
+  // monthIndex is 0-based (0=Jan). new Date(year, month+1, 0) gives the last day of that month.
+  return new Date(new Date().getFullYear(), monthIndex + 1, 0).getDate();
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +57,7 @@ function generateLabels(game: Game): string[] {
     case 'date': {
       const labels: string[] = [];
       for (let m = 0; m < 12; m++) {
-        for (let d = 1; d <= DAYS_PER_MONTH[m]; d++) {
+        for (let d = 1; d <= daysInMonth(m); d++) {
           labels.push(`${d.toString().padStart(2, '0')} ${MONTHS_ABBR[m]}`);
         }
       }

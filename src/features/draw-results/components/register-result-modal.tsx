@@ -364,15 +364,6 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
           {isDateGame ? (
             <div className="flex items-center gap-2">
               <Select
-                value={String(winDay)}
-                onChange={(v) => {
-                  setWinDay(Number(v));
-                }}
-                ariaLabel="Día ganador"
-                options={winDayOptions}
-              />
-              <span className="shrink-0 font-bold text-muted-foreground">/</span>
-              <Select
                 value={String(winMonth)}
                 onChange={(v) => {
                   const m = Number(v);
@@ -381,6 +372,15 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
                 }}
                 ariaLabel="Mes ganador"
                 options={MONTH_OPTIONS}
+              />
+              <span className="shrink-0 font-bold text-muted-foreground">/</span>
+              <Select
+                value={String(winDay)}
+                onChange={(v) => {
+                  setWinDay(Number(v));
+                }}
+                ariaLabel="Día ganador"
+                options={winDayOptions}
               />
             </div>
           ) : (
