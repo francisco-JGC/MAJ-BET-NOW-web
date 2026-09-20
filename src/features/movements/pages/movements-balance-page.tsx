@@ -453,13 +453,14 @@ function BranchMovementsSection({
         const label = BRANCH_MOVEMENT_LABEL[m.type] ?? m.type;
         const isDeposit = m.type === MovementType.DEPOSIT;
         const isWithdrawal = m.type === MovementType.WITHDRAWAL;
-        const amountColor = isDeposit ? 'text-emerald-700' : isWithdrawal ? 'text-rose-700' : 'text-foreground';
+        // Cobros (deposit) restan el restante → rojo/−. Ajuste de premio (withdrawal) suma → verde/+.
+        const amountColor = isDeposit ? 'text-rose-700' : isWithdrawal ? 'text-emerald-700' : 'text-foreground';
         const badgeClass = isDeposit
-          ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/20'
+          ? 'bg-rose-50 text-rose-700 ring-rose-500/20'
           : isWithdrawal
-            ? 'bg-rose-50 text-rose-700 ring-rose-500/20'
+            ? 'bg-emerald-50 text-emerald-700 ring-emerald-500/20'
             : 'bg-slate-50 text-slate-700 ring-slate-500/20';
-        const sign = isDeposit ? '+' : isWithdrawal ? '−' : '';
+        const sign = isDeposit ? '−' : isWithdrawal ? '+' : '';
         const who = m.sellerName ?? null;
         return (
           <li key={m.id} className="flex items-center gap-3 bg-background/60 px-3 py-2.5 text-xs">
@@ -560,8 +561,8 @@ function BranchSummaryCard({
           value={totals.wonPrize}
           tone="rose"
         />
-        <Stat label="Cobros" value={totals.deposits} tone="emerald" />
-        <Stat label="Ajustes de premio" value={totals.withdrawals} tone="rose" />
+        <Stat label="Cobros" value={totals.deposits} tone="rose" hint="Resta el restante" />
+        <Stat label="Ajustes de premio" value={totals.withdrawals} tone="emerald" hint="Suma al restante" />
         <Stat
           label="Ajustes"
           value={totals.adjustments}
@@ -678,8 +679,8 @@ function BranchCard({
           value={row.wonPrize ?? 0}
           tone="rose"
         />
-        <Stat label="Cobros" value={row.deposits ?? 0} tone="emerald" />
-        <Stat label="Ajustes de premio" value={row.withdrawals ?? 0} tone="rose" />
+        <Stat label="Cobros" value={row.deposits ?? 0} tone="rose" hint="Resta el restante" />
+        <Stat label="Ajustes de premio" value={row.withdrawals ?? 0} tone="emerald" hint="Suma al restante" />
         <Stat
           label="Ajustes"
           value={row.adjustments ?? 0}
@@ -924,16 +925,16 @@ function SellerCard({
           <Stat
             label="Cobrado"
             value={cobros}
-            tone="emerald"
-            hint="Dinero recibido del vendedor"
+            tone="rose"
+            hint="Resta el pendiente"
           />
         )}
         {credits > 0 && (
           <Stat
             label="Ajuste de premio"
             value={credits}
-            tone="rose"
-            hint="Crédito aplicado al vendedor"
+            tone="emerald"
+            hint="Suma al pendiente"
           />
         )}
         {prizePayments > 0 && (
