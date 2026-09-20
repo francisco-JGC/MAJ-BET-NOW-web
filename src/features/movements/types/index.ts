@@ -49,7 +49,7 @@ export interface MovementsBalanceRow {
   withdrawals: number;
   /** Signed sum of adjustments (positive adds to net, negative subtracts). */
   adjustments: number;
-  /** net = billed - wonPrize + deposits - withdrawals + adjustments */
+  /** net = billed - wonPrize - deposits + withdrawals + adjustments */
   net: number;
 }
 
