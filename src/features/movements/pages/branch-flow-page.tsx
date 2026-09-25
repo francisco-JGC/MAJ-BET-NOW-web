@@ -104,9 +104,19 @@ export function BranchFlowPage() {
   // con el total sumado de todas las sucursales.
   const items = useMemo(() => {
     const rows = data?.items ?? [];
+    const byGameThenLabel = (a: SalesByNumberRow, b: SalesByNumberRow) =>
+      a.gameName.localeCompare(b.gameName, 'es') ||
+      a.label.localeCompare(b.label, 'es', { numeric: true });
+
     if (salePointId) {
-      return [...rows].sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true }));
+      // Filtramos en frontend también porque el endpoint devuelve todas
+      // las sucursales sin importar el filtro enviado.
+      return rows
+        .filter((r) => r.salePointId === salePointId)
+        .sort(byGameThenLabel);
     }
+    // Todas las sucursales: agrupar por juego + número,
+    // sumando el total de todas las sucursales.
     const map = new Map<string, SalesByNumberRow>();
     for (const row of rows) {
       const key = `${row.gameId}::${row.label}`;
@@ -121,9 +131,7 @@ export function BranchFlowPage() {
         map.set(key, { ...row });
       }
     }
-    return Array.from(map.values()).sort((a, b) =>
-      a.label.localeCompare(b.label, 'es', { numeric: true }),
-    );
+    return Array.from(map.values()).sort(byGameThenLabel);
   }, [data, salePointId]);
 
   const grandTotal = useMemo(
@@ -161,12 +169,12 @@ export function BranchFlowPage() {
             disabled={items.length === 0}
             onExport={() => {
               const headers = salePointId
-                ? ['Número', 'Sucursal', 'Total Vendido']
-                : ['Número', 'Total Vendido'];
+                ? ['Número', 'Juego', 'Sucursal', 'Total Vendido']
+                : ['Número', 'Juego', 'Total Vendido'];
               const rows = items.map((r) =>
                 salePointId
-                  ? [r.label, r.salePointName, r.totalAmount]
-                  : [r.label, r.totalAmount],
+                  ? [r.label, r.gameName, r.salePointName, r.totalAmount]
+                  : [r.label, r.gameName, r.totalAmount],
               );
               downloadXlsx('sumatoria', [{ name: 'Sumatoria', headers, rows }]);
             }}
@@ -281,6 +289,7 @@ export function BranchFlowPage() {
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Número de Apuesta</th>
+                  <th className="px-4 py-3">Juego</th>
                   {salePointId && <th className="px-4 py-3">Sucursal</th>}
                   <th className="px-4 py-3 text-right">Total Vendido</th>
                 </tr>
@@ -288,12 +297,12 @@ export function BranchFlowPage() {
               <tbody className="divide-y divide-border/60">
                 {isLoading && items.length === 0 ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <SkeletonRow key={i} cols={salePointId ? 3 : 2} />
+                    <SkeletonRow key={i} cols={salePointId ? 4 : 3} />
                   ))
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={salePointId ? 3 : 2}
+                      colSpan={salePointId ? 4 : 3}
                       className="px-4 py-14 text-center text-sm text-muted-foreground"
                     >
                       Sin ventas en el rango seleccionado.
@@ -304,6 +313,9 @@ export function BranchFlowPage() {
                     <tr key={`${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
                       <td className="px-4 py-3 font-semibold tabular-nums">
                         {row.label}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {row.gameName}
                       </td>
                       {salePointId && (
                         <td className="px-4 py-3 text-muted-foreground">
@@ -320,7 +332,7 @@ export function BranchFlowPage() {
               {items.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-border bg-slate-50/70">
-                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" colSpan={salePointId ? 2 : 1}>
+                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" colSpan={salePointId ? 3 : 2}>
                       Total ({items.length} número{items.length !== 1 ? 's' : ''})
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-base font-black text-emerald-800">
