@@ -70,15 +70,37 @@ export function SalesByNumberPage() {
     ];
   }, [sellersPage]);
 
+  // Cuando no hay sucursal seleccionada el backend devuelve una fila
+  // por (sucursal × número). Las agrupamos aquí para mostrar una sola
+  // fila por número con los montos sumados de todas las sucursales.
+  const aggregatedItems = useMemo(() => {
+    if (salePointId) return items;
+    const map = new Map<string, SalesByNumberRow>();
+    for (const row of items) {
+      const key = `${row.gameId}::${row.label}`;
+      const prev = map.get(key);
+      if (prev) {
+        map.set(key, {
+          ...prev,
+          ticketCount: prev.ticketCount + row.ticketCount,
+          totalAmount: prev.totalAmount + row.totalAmount,
+        });
+      } else {
+        map.set(key, { ...row });
+      }
+    }
+    return Array.from(map.values());
+  }, [items, salePointId]);
+
   const totals = useMemo(() => {
     let totalAmount = 0;
     let ticketCount = 0;
-    for (const r of items) {
+    for (const r of aggregatedItems) {
       totalAmount += r.totalAmount;
       ticketCount += r.ticketCount;
     }
     return { totalAmount, ticketCount };
-  }, [items]);
+  }, [aggregatedItems]);
 
   return (
     <div className="space-y-6">
@@ -193,7 +215,7 @@ export function SalesByNumberPage() {
             <tbody className="divide-y divide-border/60">
               {isLoading && items.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : items.length === 0 ? (
+              ) : aggregatedItems.length === 0 ? (
                 <tr>
                   <td
                     colSpan={4}
@@ -203,7 +225,7 @@ export function SalesByNumberPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((row) => (
+                aggregatedItems.map((row) => (
                   <NumberRow
                     key={`${row.gameId}::${row.label}`}
                     row={row}
@@ -211,11 +233,11 @@ export function SalesByNumberPage() {
                 ))
               )}
             </tbody>
-            {items.length > 0 && (
+            {aggregatedItems.length > 0 && (
               <tfoot className="bg-slate-50/60 text-sm font-bold">
                 <tr>
                   <td className="px-6 py-3.5 text-foreground" colSpan={2}>
-                    Totales ({items.length} números)
+                    Totales ({aggregatedItems.length} números)
                   </td>
                   <td className="px-6 py-3.5 text-right tabular-nums">
                     {totals.ticketCount}
