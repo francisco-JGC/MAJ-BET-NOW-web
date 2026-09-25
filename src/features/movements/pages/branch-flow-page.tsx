@@ -15,10 +15,13 @@ import { useUsers } from '@/features/users/hooks/use-users';
 import { UserRole } from '@/features/auth/types';
 import { cn } from '@/shared/lib/cn';
 import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
+import { downloadXlsx } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
 import { Select } from '@/shared/ui/select';
 import { TableLoadingOverlay } from '@/shared/ui/table-loading-overlay';
 
 import type { DrawSchedule } from '@/features/games/types';
+import type { SalesByNumberRow } from '@/features/sales-by-number/types';
 
 const MANAGUA_OFFSET = '-06:00';
 
@@ -96,11 +99,32 @@ export function BranchFlowPage() {
 
   const { data, isLoading, isFetching, error } = useSalesByNumber(params);
 
-  // Sort by label ascending (backend returns by total_amount DESC)
+  // Cuando no hay sucursal seleccionada, el backend devuelve una fila por
+  // (sucursal × número). Las agrupamos para mostrar una sola fila por número
+  // con el total sumado de todas las sucursales.
   const items = useMemo(() => {
     const rows = data?.items ?? [];
-    return [...rows].sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true }));
-  }, [data]);
+    if (salePointId) {
+      return [...rows].sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true }));
+    }
+    const map = new Map<string, SalesByNumberRow>();
+    for (const row of rows) {
+      const key = `${row.gameId}::${row.label}`;
+      const prev = map.get(key);
+      if (prev) {
+        map.set(key, {
+          ...prev,
+          ticketCount: prev.ticketCount + row.ticketCount,
+          totalAmount: prev.totalAmount + row.totalAmount,
+        });
+      } else {
+        map.set(key, { ...row });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.label.localeCompare(b.label, 'es', { numeric: true }),
+    );
+  }, [data, salePointId]);
 
   const grandTotal = useMemo(
     () => items.reduce((acc, r) => acc + r.totalAmount, 0),
@@ -129,9 +153,25 @@ export function BranchFlowPage() {
           <Activity className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-black tracking-tight">Sumatoria</h1>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Total vendido por número de apuesta
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-muted-foreground">
+            Total vendido por número de apuesta
+          </p>
+          <ExportButton
+            disabled={items.length === 0}
+            onExport={() => {
+              const headers = salePointId
+                ? ['Número', 'Sucursal', 'Total Vendido']
+                : ['Número', 'Total Vendido'];
+              const rows = items.map((r) =>
+                salePointId
+                  ? [r.label, r.salePointName, r.totalAmount]
+                  : [r.label, r.totalAmount],
+              );
+              downloadXlsx('sumatoria', [{ name: 'Sumatoria', headers, rows }]);
+            }}
+          />
+        </div>
       </header>
 
       {/* Filtros */}
@@ -241,19 +281,19 @@ export function BranchFlowPage() {
               <thead className="bg-slate-50/70 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Número de Apuesta</th>
-                  <th className="px-4 py-3">Sucursal</th>
+                  {salePointId && <th className="px-4 py-3">Sucursal</th>}
                   <th className="px-4 py-3 text-right">Total Vendido</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
                 {isLoading && items.length === 0 ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <SkeletonRow key={i} />
+                    <SkeletonRow key={i} cols={salePointId ? 3 : 2} />
                   ))
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={3}
+                      colSpan={salePointId ? 3 : 2}
                       className="px-4 py-14 text-center text-sm text-muted-foreground"
                     >
                       Sin ventas en el rango seleccionado.
@@ -261,13 +301,15 @@ export function BranchFlowPage() {
                   </tr>
                 ) : (
                   items.map((row) => (
-                    <tr key={`${row.salePointId}-${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
+                    <tr key={`${row.gameId}-${row.label}`} className="hover:bg-slate-50/60">
                       <td className="px-4 py-3 font-semibold tabular-nums">
                         {row.label}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {row.salePointName}
-                      </td>
+                      {salePointId && (
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {row.salePointName}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right tabular-nums font-bold text-emerald-700">
                         {formatCurrency(row.totalAmount)}
                       </td>
@@ -278,7 +320,7 @@ export function BranchFlowPage() {
               {items.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-border bg-slate-50/70">
-                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" colSpan={2}>
+                    <td className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground" colSpan={salePointId ? 2 : 1}>
                       Total ({items.length} número{items.length !== 1 ? 's' : ''})
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-base font-black text-emerald-800">
@@ -297,10 +339,10 @@ export function BranchFlowPage() {
   );
 }
 
-function SkeletonRow() {
+function SkeletonRow({ cols = 3 }: { cols?: number }) {
   return (
     <tr>
-      {Array.from({ length: 3 }).map((_, i) => (
+      {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-4 py-4">
           <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
         </td>
