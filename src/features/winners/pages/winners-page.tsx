@@ -8,6 +8,9 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { downloadXlsx, fmtDateTime } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
+
 import { useGames } from '@/features/games/hooks/use-games';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { TicketDetailsModal } from '@/features/tickets/components/ticket-details-modal';
@@ -154,11 +157,31 @@ export function WinnersPage() {
           <Trophy className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-black tracking-tight">Ganadores</h1>
         </div>
-        {isFetching && (
-          <span className="text-xs text-muted-foreground animate-pulse">
-            Actualizando…
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {isFetching && (
+            <span className="text-xs text-muted-foreground animate-pulse">
+              Actualizando…
+            </span>
+          )}
+          <ExportButton
+            disabled={winners.length === 0}
+            onExport={() => {
+              downloadXlsx('ganadores', [{
+                name: 'Ganadores',
+                headers: ['Folio', 'Juego', 'Sorteo', 'Sucursal', 'Vendedor', 'Cliente', 'Premio Total'],
+                rows: winners.map((w) => [
+                  w.ticket.folio,
+                  gameById.get(w.ticket.gameId)?.name ?? '',
+                  fmtDateTime(w.ticket.drawAt),
+                  w.ticket.salePointName ?? '',
+                  w.ticket.sellerName ?? '',
+                  w.ticket.client ?? '',
+                  w.totalPrize,
+                ]),
+              }]);
+            }}
+          />
+        </div>
       </header>
 
       <div className={cn('grid gap-4 transition-opacity', isFetching && 'opacity-50')}>

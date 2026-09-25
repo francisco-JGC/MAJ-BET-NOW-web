@@ -7,6 +7,9 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { downloadXlsx } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
+
 import { useGames } from '@/features/games/hooks/use-games';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useSalesByNumber } from '@/features/sales-by-number/hooks/use-sales-by-number';
@@ -111,10 +114,27 @@ export function SalesByNumberPage() {
             Montos Máximos
           </h1>
         </div>
-        <p className="max-w-md text-xs text-muted-foreground">
-          Cuántas veces se vendió cada número y monto total apostado, según
-          los filtros. Solo tickets válidos (los anulados no cuentan).
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="max-w-md text-xs text-muted-foreground">
+            Cuántas veces se vendió cada número y monto total apostado, según
+            los filtros. Solo tickets válidos (los anulados no cuentan).
+          </p>
+          <ExportButton
+            disabled={aggregatedItems.length === 0}
+            onExport={() => {
+              downloadXlsx('sumatoria-por-numero', [{
+                name: 'Sumatoria',
+                headers: ['Número', 'Juego', 'Veces Vendido', 'Monto Total'],
+                rows: aggregatedItems.map((r) => [
+                  r.label,
+                  r.gameName,
+                  r.ticketCount,
+                  r.totalAmount,
+                ]),
+              }]);
+            }}
+          />
+        </div>
       </header>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">

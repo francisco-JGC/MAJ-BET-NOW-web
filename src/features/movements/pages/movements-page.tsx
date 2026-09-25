@@ -20,11 +20,14 @@ import {
 
 import { CreateMovementModal } from '@/features/movements/components/create-movement-modal';
 import { EditMovementModal } from '@/features/movements/components/edit-movement-modal';
+import { listMovements } from '@/features/movements/api/movements.api';
 import {
   useDeleteMovement,
   useMovements,
 } from '@/features/movements/hooks/use-movements';
 import { MovementType } from '@/features/movements/types';
+import { downloadXlsx, fmtDate } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { UserRole } from '@/features/users/types';
@@ -182,6 +185,40 @@ export function MovementsPage() {
 
   const deleteMovement = useDeleteMovement();
 
+  async function handleExport() {
+    const all = await listMovements({
+      salePointId: salePointId || undefined,
+      sellerId: sellerId || undefined,
+      type: (type || undefined) as MovementType | undefined,
+      from: from ? `${from}T00:00:00-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
+      page: 1,
+      limit: 5000,
+    });
+    downloadXlsx('movimientos', [{
+      name: 'Movimientos',
+      headers: ['Fecha', 'Destino', 'Tipo', 'Es Premio', 'Monto', 'Descripción', 'Creado por'],
+      rows: all.items.map((m) => {
+        const isSeller = m.sellerId != null;
+        const dest = isSeller
+          ? (m.sellerName ?? '—')
+          : (salePointById.get(m.salePointId ?? '')?.name ?? m.salePointId ?? '—');
+        const typeMeta = isSeller
+          ? (SELLER_TYPE_META[m.type] ?? TYPE_META[m.type])
+          : TYPE_META[m.type];
+        return [
+          fmtDate(m.occurredAt),
+          dest,
+          typeMeta.label,
+          m.isPrizePayment ? 'Sí' : 'No',
+          m.amount,
+          m.description || '',
+          m.createdByName ?? '',
+        ];
+      }),
+    }]);
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -189,14 +226,17 @@ export function MovementsPage() {
           <ListChecks className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-black tracking-tight">Movimientos</h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="size-4" strokeWidth={2.8} />
-          Nuevo movimiento
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton disabled={total === 0} onExport={handleExport} />
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="size-4" strokeWidth={2.8} />
+            Nuevo movimiento
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">

@@ -13,11 +13,14 @@ import {
 
 import { useGames, useGameSchedules } from '@/features/games/hooks/use-games';
 import { useSalePoints } from '@/features/sale-points/hooks/use-sale-points';
+import { listTickets } from '@/features/tickets/api/tickets.api';
 import { TicketDetailsModal } from '@/features/tickets/components/ticket-details-modal';
 import { useTicket, useTickets } from '@/features/tickets/hooks/use-tickets';
 import { useUsers } from '@/features/users/hooks/use-users';
 import { cn } from '@/shared/lib/cn';
 import { endOfDayParam, formatCurrency, formatDrawTimeLabel } from '@/shared/lib/format';
+import { downloadXlsx, fmtDateTime } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
 import {
   SegmentedControl,
   type SegmentTab,
@@ -187,6 +190,36 @@ export function SalesPage() {
   const hasPrev = page > 0;
   const hasNext = rangeEnd < total;
 
+  async function handleExport() {
+    const all = await listTickets({
+      status: status === 'all' ? undefined : status,
+      gameId: gameId || undefined,
+      drawTime: drawTime || undefined,
+      salePointId: salePointId || undefined,
+      sellerId: sellerId || undefined,
+      from: from ? `${from}T00:00:00-06:00` : undefined,
+      to: to ? endOfDayParam(to) : undefined,
+      search: debouncedSearch || undefined,
+      page: 0,
+      limit: 5000,
+    });
+    downloadXlsx('facturas', [{
+      name: 'Facturas',
+      headers: ['Folio', 'Creado', 'Sucursal', 'Vendedor', 'Cliente', 'Juego', 'Sorteo', 'Total', 'Estado'],
+      rows: all.items.map((t) => [
+        t.folio,
+        fmtDateTime(t.createdAt),
+        t.salePointName ?? salePointById.get(t.salePointId)?.name ?? '',
+        t.sellerName ?? '',
+        t.client ?? '',
+        gameById.get(t.gameId)?.name ?? '',
+        fmtDateTime(t.drawAt),
+        t.total,
+        t.status === 'valid' ? 'Válido' : 'Anulado',
+      ]),
+    }]);
+  }
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -204,6 +237,7 @@ export function SalesPage() {
             {' · '}
             <span className="font-semibold text-rose-700">{formatCurrency(stats.won)}</span> ganado
           </span>
+          <ExportButton disabled={total === 0} onExport={handleExport} />
         </div>
       </header>
 

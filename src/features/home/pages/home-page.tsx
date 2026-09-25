@@ -10,6 +10,9 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { downloadXlsx } from '@/shared/lib/export-xlsx';
+import { ExportButton } from '@/shared/ui/export-button';
+
 import { ExpandableKpiCard } from '@/features/home/components/expandable-kpi-card';
 import {
   KpiCard,
@@ -68,9 +71,49 @@ export function HomePage() {
       : `del ${formatShortDate(from)} al ${formatShortDate(to)}`;
   const deltaHint = isOnlyToday ? 'vs ayer' : 'vs período previo';
 
+  function handleExport() {
+    if (!data) return;
+    downloadXlsx('inicio', [
+      {
+        name: 'Resumen',
+        headers: ['Métrica', 'Valor'],
+        rows: [
+          ['Facturado', data.billed],
+          ['Pérdida (premios)', data.won],
+          ['Utilidad', data.profit],
+          ['Boletos', data.tickets],
+          ['Ticket promedio', data.averageTicket],
+          ['Venta semanal', data.weeklyBilled],
+        ],
+      },
+      {
+        name: 'Por Juego',
+        headers: ['Juego', 'Facturado', 'Pérdida'],
+        rows: data.byGame.map((g) => [g.gameName, g.billed, g.won]),
+      },
+      {
+        name: 'Top Vendedores',
+        headers: ['Vendedor', 'Monto', 'Boletos'],
+        rows: data.topSellers.map((s) => [s.name, s.amount, s.ticketCount]),
+      },
+      {
+        name: 'Top Sucursales',
+        headers: ['Sucursal', 'Monto', 'Boletos'],
+        rows: data.topSalePoints.map((sp) => [sp.name, sp.amount, sp.ticketCount]),
+      },
+    ]);
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader name={session?.user.name ?? ''} />
+      <PageHeader
+        name={session?.user.name ?? ''}
+        rightSlot={
+          data ? (
+            <ExportButton onExport={handleExport} />
+          ) : undefined
+        }
+      />
 
       <RangeFilter
         from={from}
@@ -178,7 +221,13 @@ function pctDelta(
   return { pct, positive };
 }
 
-function PageHeader({ name }: { name: string }) {
+function PageHeader({
+  name,
+  rightSlot,
+}: {
+  name: string;
+  rightSlot?: React.ReactNode;
+}) {
   const today = new Intl.DateTimeFormat('es', {
     weekday: 'long',
     day: 'numeric',
@@ -196,6 +245,7 @@ function PageHeader({ name }: { name: string }) {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{capitalized}</p>
       </div>
+      {rightSlot}
     </header>
   );
 }
