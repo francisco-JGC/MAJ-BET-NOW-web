@@ -5,7 +5,7 @@ import {
   forceLogout,
   getAuthToken,
   getRefreshToken,
-  updateAccessToken,
+  updateTokens,
 } from '@/features/auth/store/auth.store';
 import { env } from '@/shared/constants/env';
 import { APP_ROUTES } from '@/shared/constants/routes';
@@ -39,9 +39,11 @@ http.interceptors.request.use((config) => {
  * they all await the SAME refresh call — we don't want to burn N refresh
  * tokens (and if the backend ever adds rotation, this becomes critical).
  */
-let inflightRefresh: Promise<string> | null = null;
+let inflightRefresh: Promise<{ accessToken: string; refreshToken: string }> | null = null;
 
-async function refreshOnce(refreshToken: string): Promise<string> {
+async function refreshOnce(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
   if (!inflightRefresh) {
     inflightRefresh = refreshAccessToken(refreshToken).finally(() => {
       inflightRefresh = null;
@@ -89,8 +91,9 @@ http.interceptors.response.use(
     }
 
     try {
-      const newToken = await refreshOnce(refreshToken);
-      updateAccessToken(newToken);
+      const { accessToken: newToken, refreshToken: newRefreshToken } =
+        await refreshOnce(refreshToken);
+      updateTokens(newToken, newRefreshToken);
       original._retried = true;
       original.headers.set('Authorization', `Bearer ${newToken}`);
       return http.request(original);

@@ -14,6 +14,7 @@ interface LoginResponse {
 
 interface RefreshResponse {
   accessToken: string;
+  refreshToken: string;
 }
 
 /** POST /auth/login — thin wrapper around the backend endpoint. */
@@ -33,13 +34,13 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
  * instance) to avoid the interceptor recursively calling itself when
  * refresh itself fails.
  */
-export async function refresh(refreshToken: string): Promise<string> {
+export async function refresh(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken: string }> {
   const { data } = await http.post<RefreshResponse>(
     '/auth/refresh',
     { refreshToken },
-    // Tag the request so the response interceptor knows this call itself
-    // is the refresh attempt and must NOT try to refresh again on 401.
     { headers: { 'X-Refresh-Attempt': '1' } },
   );
-  return data.accessToken;
+  return { accessToken: data.accessToken, refreshToken: data.refreshToken };
 }

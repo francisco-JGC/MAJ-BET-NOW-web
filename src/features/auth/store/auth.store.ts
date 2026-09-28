@@ -16,11 +16,8 @@ interface AuthState {
    */
   _hasHydrated: boolean;
   setSession: (session: AuthSession) => void;
-  /**
-   * Replace only the short-lived access token — used after a successful
-   * silent refresh so the same session object keeps working.
-   */
-  setAccessToken: (token: string) => void;
+  /** Rotate both tokens atomically after a silent refresh. */
+  setTokens: (accessToken: string, refreshToken: string) => void;
   clearSession: () => void;
   _setHasHydrated: (v: boolean) => void;
 }
@@ -38,9 +35,11 @@ export const useAuthStore = create<AuthState>()(
       session: null,
       _hasHydrated: false,
       setSession: (session) => set({ session }),
-      setAccessToken: (token) =>
+      setTokens: (accessToken, refreshToken) =>
         set((state) =>
-          state.session ? { session: { ...state.session, token } } : state,
+          state.session
+            ? { session: { ...state.session, token: accessToken, refreshToken } }
+            : state,
         ),
       clearSession: () => set({ session: null }),
       _setHasHydrated: (v) => set({ _hasHydrated: v }),
@@ -72,9 +71,9 @@ export function getRefreshToken(): string | null {
   return useAuthStore.getState().session?.refreshToken ?? null;
 }
 
-/** Called by the interceptor after a successful refresh. */
-export function updateAccessToken(token: string): void {
-  useAuthStore.getState().setAccessToken(token);
+/** Called by the interceptor after a successful rotating refresh. */
+export function updateTokens(accessToken: string, refreshToken: string): void {
+  useAuthStore.getState().setTokens(accessToken, refreshToken);
 }
 
 /**
