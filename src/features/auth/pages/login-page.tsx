@@ -1,8 +1,10 @@
 import { type FormEvent, useState } from 'react';
 import { Eye, EyeOff, Loader2, Lock, User } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { useLogin } from '@/features/auth/hooks/use-login';
+import { useIsAuthenticated } from '@/features/auth/hooks/use-session';
+import { useHasHydrated } from '@/features/auth/store/auth.store';
 import { APP_ROUTES } from '@/shared/constants/routes';
 
 interface LocationState {
@@ -19,6 +21,14 @@ export function LoginPage() {
   const location = useLocation();
   const from = (location.state as LocationState | null)?.from?.pathname
     ?? APP_ROUTES.home;
+
+  const hasHydrated = useHasHydrated();
+  const isAuthed = useIsAuthenticated();
+
+  // Sesión activa en localStorage → no mostrar el formulario, ir directo.
+  if (hasHydrated && isAuthed) {
+    return <Navigate to={from} replace />;
+  }
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
