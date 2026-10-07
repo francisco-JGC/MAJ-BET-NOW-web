@@ -1,3 +1,4 @@
+import { AUTH_ENDPOINTS } from '@/features/auth/constants';
 import { http } from '@/shared/api/http';
 
 import type {
@@ -12,14 +13,9 @@ interface LoginResponse {
   user: AuthenticatedUser;
 }
 
-interface RefreshResponse {
-  accessToken: string;
-  refreshToken: string;
-}
-
-/** POST /auth/login — thin wrapper around the backend endpoint. */
+/** POST /auth/login — wrapper fino sobre el endpoint del backend. */
 export async function login(payload: LoginPayload): Promise<AuthSession> {
-  const { data } = await http.post<LoginResponse>('/auth/login', payload);
+  const { data } = await http.post<LoginResponse>(AUTH_ENDPOINTS.login, payload);
   return {
     token: data.accessToken,
     refreshToken: data.refreshToken,
@@ -27,20 +23,6 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   };
 }
 
-/**
- * POST /auth/refresh — exchange a valid refresh token for a fresh access
- * token. Called by the axios interceptor when a 401 lands on an
- * authenticated request. Uses the raw axios import (not our `http`
- * instance) to avoid the interceptor recursively calling itself when
- * refresh itself fails.
- */
-export async function refresh(
-  refreshToken: string,
-): Promise<{ accessToken: string; refreshToken: string }> {
-  const { data } = await http.post<RefreshResponse>(
-    '/auth/refresh',
-    { refreshToken },
-    { headers: { 'X-Refresh-Attempt': '1' } },
-  );
-  return { accessToken: data.accessToken, refreshToken: data.refreshToken };
-}
+// El refresh NO vive acá: lo maneja `features/auth/session.ts` con su
+// propio cliente sin interceptores. Tener dos caminos de refresh fue
+// justamente lo que hacía que una caída de red borrara la sesión.
