@@ -24,6 +24,7 @@ export const APP_ROUTES = {
   draws: '/sorteos',
   latestResults: '/ultimos-resultados',
   systemConfig: '/configuracion-sistema',
+  roulette: '/ruleta',
 } as const;
 
 /** Concrete `/sucursales/{id}/configuracion` URL for navigation. */

@@ -4,6 +4,7 @@ import {
   Activity,
   Calculator,
   ChevronDown,
+  CircleDot,
   Dices,
   History,
   Home,
@@ -69,6 +70,7 @@ const NAV_ENTRIES: readonly NavEntry[] = [
     children: [
       { to: APP_ROUTES.draws, label: 'Sorteos', icon: Dices },
       { to: APP_ROUTES.systemConfig, label: 'Sistema', icon: Settings2 },
+      { to: APP_ROUTES.roulette, label: 'Ruleta', icon: CircleDot },
     ],
   },
   { to: APP_ROUTES.latestResults, label: 'Últimos Resultados', icon: History },
