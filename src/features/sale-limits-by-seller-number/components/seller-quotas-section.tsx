@@ -53,13 +53,40 @@ export function SellerQuotasSection({
     () => new Map((games ?? []).map((g) => [g.id, g])),
     [games],
   );
-  const sellers = useMemo(() => {
-    const all = (sellersPage?.items ?? []).filter(
-      (u) => u.isActive && u.salePointId === salePoint.id,
-    );
-    if (sellerIdFilter) return all.filter((u) => u.id === sellerIdFilter);
-    return all;
-  }, [sellersPage, salePoint.id, sellerIdFilter]);
+  // Índice sobre TODOS los vendedores (activos o no, de cualquier
+  // sucursal). Sirve para ponerle nombre y motivo a las cuotas huérfanas:
+  // las que quedaron de un vendedor que se movió de sucursal o que fue
+  // desactivado. Esas cuotas siguen descontando del pool, así que tienen
+  // que poder verse y borrarse.
+  const sellerById = useMemo(
+    () => new Map((sellersPage?.items ?? []).map((u) => [u.id, u])),
+    [sellersPage],
+  );
+
+  // Vendedores que SÍ pertenecen a esta sucursal. Es el criterio para
+  // decidir si una cuota es huérfana — se calcula sin aplicar el filtro
+  // por vendedor, porque si no el filtro haría pasar por huérfanas a las
+  // cuotas legítimas de los demás.
+  const branchSellers = useMemo(
+    () =>
+      (sellersPage?.items ?? []).filter(
+        (u) => u.isActive && u.salePointId === salePoint.id,
+      ),
+    [sellersPage, salePoint.id],
+  );
+  const branchSellerIds = useMemo(
+    () => new Set(branchSellers.map((u) => u.id)),
+    [branchSellers],
+  );
+
+  const sellers = useMemo(
+    () =>
+      sellerIdFilter
+        ? branchSellers.filter((u) => u.id === sellerIdFilter)
+        : branchSellers,
+    [branchSellers, sellerIdFilter],
+  );
+
 
   // O(Q) build — lookup is O(1) per limit instead of O(Q) linear scan.
   const quotasByKey = useMemo(() => {
@@ -131,7 +158,7 @@ export function SellerQuotasSection({
           <span className="font-semibold">"Montos Máximos"</span> para
           poder repartirlos entre vendedores.
         </div>
-      ) : sellers.length === 0 ? (
+      ) : sellers.length === 0 && (quotas ?? []).length === 0 ? (
         <div className="px-6 py-10 text-center text-sm text-muted-foreground">
           {sellerIdFilter
             ? 'El vendedor seleccionado no está activo en esta sucursal.'
@@ -149,6 +176,8 @@ export function SellerQuotasSection({
               sucursalCap={g.sucursalCap}
               quotas={g.quotas}
               sellers={sellers}
+              branchSellerIds={branchSellerIds}
+              sellerById={sellerById}
             />
           ))}
         </ul>
@@ -165,6 +194,8 @@ interface GroupBlockProps {
   sucursalCap: number;
   quotas: SaleLimitBySellerNumber[];
   sellers: User[];
+  branchSellerIds: Set<string>;
+  sellerById: Map<string, User>;
 }
 
 function GroupBlock({
@@ -175,10 +206,43 @@ function GroupBlock({
   sucursalCap,
   quotas,
   sellers,
+  branchSellerIds,
+  sellerById,
 }: GroupBlockProps) {
   // Collapsed by default — with hundreds of groups, mounting every seller row
   // at once tanks rendering. The user expands the one they want to edit.
   const [open, setOpen] = useState(false);
+  const removeOrphan = useDeleteSaleLimitBySellerNumber(salePointId);
+  const [bulkPending, setBulkPending] = useState(false);
+
+  // Cuotas cuyo dueño ya no es vendedor activo de esta sucursal. No tenían
+  // fila en la tabla — se renderizaban iterando `sellers` — así que eran
+  // invisibles e imposibles de borrar, pero seguían contando en
+  // `totalAssigned` y reservando cupo que nadie podía usar.
+  const orphans = useMemo(
+    () => quotas.filter((q) => !branchSellerIds.has(q.sellerId)),
+    [quotas, branchSellerIds],
+  );
+
+  // Cuántos vendedores de la sucursal tienen cuota. Se cuenta contra
+  // `branchSellerIds` y no contra `sellers`, para que el filtro por
+  // vendedor no altere el total del grupo.
+  const assignedCount = useMemo(
+    () => quotas.filter((q) => branchSellerIds.has(q.sellerId)).length,
+    [quotas, branchSellerIds],
+  );
+
+  async function handleDeleteOrphans() {
+    setBulkPending(true);
+    try {
+      for (const q of orphans) {
+        await removeOrphan.mutateAsync(q.id);
+      }
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
 
   const totalAssigned = useMemo(
     () => quotas.reduce((acc, q) => acc + q.amount, 0),
@@ -220,6 +284,11 @@ function GroupBlock({
             label="Pool sobrante"
             value={formatCurrency(remaining)}
           />
+          <StatChip
+            tone="slate"
+            label="Con cuota"
+            value={`${assignedCount} de ${branchSellerIds.size}`}
+          />
           <ChevronDown
             className={cn(
               'size-4 text-muted-foreground transition-transform',
@@ -253,9 +322,95 @@ function GroupBlock({
                 existing={quotaBySeller.get(s.id)}
               />
             ))}
+            {orphans.map((q) => (
+              <OrphanQuotaRow
+                key={q.id}
+                salePointId={salePointId}
+                quota={q}
+                seller={sellerById.get(q.sellerId)}
+              />
+            ))}
           </ul>
+
+          {orphans.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
+              <p className="text-xs text-amber-800">
+                <strong>
+                  {orphans.length} cuota{orphans.length === 1 ? '' : 's'} sin
+                  vendedor activo en esta sucursal
+                </strong>{' '}
+                reserva{orphans.length === 1 ? '' : 'n'}{' '}
+                {formatCurrency(
+                  orphans.reduce((acc, q) => acc + q.amount, 0),
+                )}{' '}
+                que nadie puede vender. Eliminalas para liberar el pool.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteOrphans}
+                disabled={bulkPending}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-500/20 disabled:opacity-50"
+              >
+                {bulkPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" strokeWidth={2.4} />
+                )}
+                Eliminar las {orphans.length}
+              </button>
+            </div>
+          )}
         </>
       )}
+    </li>
+  );
+}
+
+/**
+ * Fila de una cuota cuyo vendedor ya no pertenece a la sucursal. No se
+ * puede editar el monto (no tendría sentido reservarle cupo a alguien que
+ * no vende ahí); solo se ofrece eliminarla.
+ */
+function OrphanQuotaRow({
+  salePointId,
+  quota,
+  seller,
+}: {
+  salePointId: string;
+  quota: SaleLimitBySellerNumber;
+  seller?: User;
+}) {
+  const remove = useDeleteSaleLimitBySellerNumber(salePointId);
+
+  const motivo = !seller
+    ? 'El vendedor ya no existe'
+    : !seller.isActive
+      ? 'Vendedor desactivado'
+      : 'El vendedor fue movido a otra sucursal';
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 bg-amber-50/60 px-3 py-2.5">
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-foreground">
+          {seller?.name ?? 'Vendedor desconocido'}
+        </div>
+        <div className="mt-0.5 text-[11px] text-amber-700">
+          {motivo} · reserva {formatCurrency(quota.amount)}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => remove.mutate(quota.id)}
+        disabled={remove.isPending}
+        className="inline-flex size-8 items-center justify-center rounded-lg border border-rose-500/40 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20 disabled:opacity-50"
+        aria-label="Eliminar cuota huérfana"
+      >
+        {remove.isPending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Trash2 className="size-4" strokeWidth={2.4} />
+        )}
+      </button>
     </li>
   );
 }
@@ -322,11 +477,31 @@ function SellerQuotaRow({
         <div className="text-sm font-semibold text-foreground">
           {seller.name}
         </div>
-        {existing && (
-          <div className="text-[11px] text-muted-foreground">
-            Cuota activa: {formatCurrency(existing.amount)}
-          </div>
-        )}
+        {/* Estado explícito en AMBOS casos. Antes, "sin cuota" no mostraba
+            nada y el único indicio era el placeholder del input, que
+            desaparece apenas se teclea: no se podía saber de un vistazo
+            quién tenía cuota y quién no. El chip "Sin guardar" evita el
+            otro malentendido — un monto escrito pero no confirmado se veía
+            idéntico a uno ya asignado. */}
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {existing ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/30">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              Cuota asignada · {formatCurrency(existing.amount)}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-inset ring-slate-400/30">
+              <span className="size-1.5 rounded-full bg-slate-400" />
+              Sin cuota · comparte el pool
+            </span>
+          )}
+          {changed && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/30">
+              <span className="size-1.5 rounded-full bg-amber-500" />
+              Sin guardar
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <div className="relative">
@@ -396,7 +571,7 @@ function StatChip({
   label,
   value,
 }: {
-  tone: 'emerald' | 'indigo' | 'rose';
+  tone: 'emerald' | 'indigo' | 'rose' | 'slate';
   label: string;
   value: string;
 }) {
@@ -405,7 +580,9 @@ function StatChip({
       ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20'
       : tone === 'indigo'
         ? 'bg-indigo-500/10 text-indigo-700 ring-indigo-500/20'
-        : 'bg-rose-500/10 text-rose-700 ring-rose-500/20';
+        : tone === 'slate'
+          ? 'bg-slate-500/10 text-slate-600 ring-slate-400/25'
+          : 'bg-rose-500/10 text-rose-700 ring-rose-500/20';
   return (
     <div
       className={cn(
