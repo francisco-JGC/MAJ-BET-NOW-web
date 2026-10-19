@@ -3,7 +3,9 @@ export type GameType =
   | 'date'
   | 'three_digit'
   | 'four_digit'
-  | 'multi_sorteo';
+  | 'multi_sorteo'
+  /** Minijuego instantáneo: cada tirada es su propio sorteo. */
+  | 'roulette';
 
 export interface Game {
   id: string;

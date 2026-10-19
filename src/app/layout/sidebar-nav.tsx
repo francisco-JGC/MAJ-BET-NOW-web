@@ -71,6 +71,7 @@ const NAV_ENTRIES: readonly NavEntry[] = [
       { to: APP_ROUTES.draws, label: 'Sorteos', icon: Dices },
       { to: APP_ROUTES.systemConfig, label: 'Sistema', icon: Settings2 },
       { to: APP_ROUTES.roulette, label: 'Ruleta', icon: CircleDot },
+      { to: APP_ROUTES.roulettePlays, label: 'Jugadas de ruleta', icon: History },
     ],
   },
   { to: APP_ROUTES.latestResults, label: 'Últimos Resultados', icon: History },

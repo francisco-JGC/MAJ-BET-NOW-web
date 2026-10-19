@@ -73,6 +73,11 @@ const RouletteConfigPage = lazy(() =>
     default: m.RouletteConfigPage,
   })),
 );
+const RoulettePlaysPage = lazy(() =>
+  import('@/features/roulette/pages/roulette-plays-page').then((m) => ({
+    default: m.RoulettePlaysPage,
+  })),
+);
 const SucursalConfigPage = lazy(() =>
   import('@/features/sale-points/pages/sucursal-config-page').then((m) => ({
     default: m.SucursalConfigPage,
@@ -228,6 +233,7 @@ const router = createBrowserRouter([
                   { path: APP_ROUTES.draws, element: <DrawsPage /> },
                   { path: APP_ROUTES.systemConfig, element: <SystemConfigPage /> },
                   { path: APP_ROUTES.roulette, element: <RouletteConfigPage /> },
+                  { path: APP_ROUTES.roulettePlays, element: <RoulettePlaysPage /> },
                   { path: APP_ROUTES.salesByNumber, element: <SaleLimitsPage /> },
                 ],
               },

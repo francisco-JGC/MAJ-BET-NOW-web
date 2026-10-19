@@ -36,11 +36,13 @@ export function RouletteConfigPage() {
 
   const [winPercent, setWinPercent] = useState('');
   const [multiplier, setMultiplier] = useState('');
+  const [testMode, setTestMode] = useState(false);
 
   useEffect(() => {
     if (!config) return;
     setWinPercent(String(bpsToPercent(config.winPercentBps)));
     setMultiplier(String(config.prizeMultiplier));
+    setTestMode(config.testMode);
   }, [config]);
 
   const parsedPercent = Number.parseFloat(winPercent);
@@ -71,6 +73,7 @@ export function RouletteConfigPage() {
       salePointId,
       winPercentBps: percentToBps(parsedPercent),
       prizeMultiplier: parsedMultiplier,
+      testMode,
     });
   }
 
@@ -146,6 +149,31 @@ export function RouletteConfigPage() {
                 />
               </Field>
             </div>
+
+            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+              <input
+                type="checkbox"
+                checked={testMode}
+                onChange={(e) => setTestMode(e.target.checked)}
+                className="mt-0.5 size-4 accent-amber-600"
+              />
+              <span className="text-sm">
+                <span className="font-bold text-amber-900">
+                  Permitir modo prueba
+                </span>
+                <span className="mt-0.5 block text-xs text-amber-800">
+                  Habilita el switch de prueba en la app. El vendedor elige
+                  tirada por tirada; las de prueba se registran para
+                  auditoría pero{' '}
+                  <strong>no generan factura ni sorteo</strong>, así que no
+                  entran a su cuenta ni a los reportes de venta.
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-amber-900">
+                  Dejalo apagado salvo que estés calibrando: una tirada de
+                  prueba no deja rastro en facturación.
+                </span>
+              </span>
+            </label>
 
             <RtpPanel rtp={rtp} houseLoses={houseLoses} />
 

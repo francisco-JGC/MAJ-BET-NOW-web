@@ -3,12 +3,15 @@ import { toast } from 'sonner';
 
 import {
   getRouletteBoard,
+  listRoulettePlays,
   getRouletteConfig,
   upsertRouletteConfig,
 } from '@/features/roulette/api/roulette.api';
 import { toApiError } from '@/shared/api/error-mapper';
 
 import type {
+  ListRoulettePlaysParams,
+  ListRoulettePlaysResponse,
   RouletteBoard,
   RouletteConfig,
   UpsertRouletteConfigPayload,
@@ -20,7 +23,22 @@ export const rouletteKeys = {
   board: () => [...rouletteKeys.all, 'board'] as const,
   config: (salePointId: string | null) =>
     [...rouletteKeys.all, 'config', salePointId ?? 'global'] as const,
+  plays: (params: ListRoulettePlaysParams) =>
+    [...rouletteKeys.all, 'plays', params] as const,
 };
+
+export function useRoulettePlays(params: ListRoulettePlaysParams) {
+  return useQuery<ListRoulettePlaysResponse, ApiError>({
+    queryKey: rouletteKeys.plays(params),
+    queryFn: async () => {
+      try {
+        return await listRoulettePlays(params);
+      } catch (error) {
+        throw toApiError(error);
+      }
+    },
+  });
+}
 
 export function useRouletteBoard() {
   return useQuery<RouletteBoard, ApiError>({

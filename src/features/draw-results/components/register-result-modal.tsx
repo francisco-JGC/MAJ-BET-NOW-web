@@ -73,6 +73,7 @@ const NUMBER_HINT: Record<GameType, string> = {
   three_digit: 'Ej. 234',
   four_digit: 'Ej. 4589',
   multi_sorteo: 'Ej. 12',
+  roulette: 'Ej. 00 o 17',
 };
 
 export function RegisterResultModal({ open, onClose, existing }: Props) {
@@ -318,7 +319,10 @@ export function RegisterResultModal({ open, onClose, existing }: Props) {
             ariaLabel="Juego"
             options={
               games
-                ?.filter((g) => g.isActive || g.id === gameId)
+                // La ruleta queda fuera: sus sorteos los crea el propio
+                // juego en cada tirada, no se registran a mano.
+                ?.filter((g) => g.type !== 'roulette')
+                .filter((g) => g.isActive || g.id === gameId)
                 .map((g) => ({ value: g.id, label: g.name })) ?? []
             }
           />

@@ -51,6 +51,10 @@ function generateLabels(game: Game): string[] {
       return Array.from({ length: 1000 }, (_, i) => i.toString().padStart(3, '0'));
     case 'four_digit':
       return Array.from({ length: 10000 }, (_, i) => i.toString().padStart(4, '0'));
+    case 'roulette':
+      // 0, 00 y 1-36. '0' y '00' son casillas distintas, así que no se
+      // pueden generar como números.
+      return ['0', '00', ...Array.from({ length: 36 }, (_, i) => `${i + 1}`)];
     case 'date': {
       const labels: string[] = [];
       for (let m = 0; m < 12; m++) {

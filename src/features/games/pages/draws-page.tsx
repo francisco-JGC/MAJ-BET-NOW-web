@@ -25,6 +25,7 @@ const TYPE_LABELS: Record<GameType, string> = {
   three_digit: '3 dígitos',
   four_digit: '4 dígitos',
   multi_sorteo: 'Multi Sorteo',
+  roulette: 'Ruleta',
 };
 
 const TYPE_TONE: Record<GameType, string> = {
@@ -32,6 +33,7 @@ const TYPE_TONE: Record<GameType, string> = {
   date: 'bg-purple-500/10 text-purple-700 ring-purple-500/20',
   three_digit: 'bg-indigo-500/10 text-indigo-700 ring-indigo-500/20',
   four_digit: 'bg-fuchsia-500/10 text-fuchsia-700 ring-fuchsia-500/20',
+  roulette: 'bg-amber-500/10 text-amber-700 ring-amber-500/20',
   multi_sorteo: 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/20',
 };
 
@@ -44,7 +46,9 @@ export function DrawsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (data ?? []).filter((g) => {
+    // La ruleta se excluye: no tiene horarios —cada tirada es su propio
+    // sorteo— así que en esta pantalla solo sería ruido.
+    return (data ?? []).filter((g) => g.type !== 'roulette').filter((g) => {
       if (filter === 'active' && !g.isActive) return false;
       if (filter === 'inactive' && g.isActive) return false;
       if (q && !g.name.toLowerCase().includes(q)) return false;

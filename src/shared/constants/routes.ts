@@ -25,6 +25,7 @@ export const APP_ROUTES = {
   latestResults: '/ultimos-resultados',
   systemConfig: '/configuracion-sistema',
   roulette: '/ruleta',
+  roulettePlays: '/ruleta/jugadas',
 } as const;
 
 /** Concrete `/sucursales/{id}/configuracion` URL for navigation. */

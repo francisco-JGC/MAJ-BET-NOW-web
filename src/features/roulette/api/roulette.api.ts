@@ -1,6 +1,8 @@
 import { http } from '@/shared/api/http';
 
 import type {
+  ListRoulettePlaysParams,
+  ListRoulettePlaysResponse,
   RouletteBoard,
   RouletteConfig,
   UpsertRouletteConfigPayload,
@@ -25,5 +27,15 @@ export async function upsertRouletteConfig(
   payload: UpsertRouletteConfigPayload,
 ): Promise<RouletteConfig> {
   const { data } = await http.put<RouletteConfig>('/roulette/config', payload);
+  return data;
+}
+
+export async function listRoulettePlays(
+  params: ListRoulettePlaysParams,
+): Promise<ListRoulettePlaysResponse> {
+  const { data } = await http.get<ListRoulettePlaysResponse>(
+    '/roulette/plays',
+    { params },
+  );
   return data;
 }
