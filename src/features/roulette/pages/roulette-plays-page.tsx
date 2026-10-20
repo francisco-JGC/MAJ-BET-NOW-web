@@ -162,17 +162,23 @@ export function RoulettePlaysPage() {
                     </Td>
                     <Td>
                       <div className="flex flex-wrap gap-1">
-                        {p.numbers.map((n) => (
+                        {p.bets.map((b) => (
                           <span
-                            key={n}
+                            key={b.number}
+                            // El monto va pegado a su casilla: con montos
+                            // distintos por número, mostrar solo el número
+                            // dejaría afuera la mitad de la información.
                             className={cn(
                               'rounded px-1.5 py-0.5 font-mono text-[11px] font-bold',
-                              n === p.winningNumber
+                              b.number === p.winningNumber
                                 ? 'bg-emerald-500 text-white'
                                 : 'bg-muted text-muted-foreground',
                             )}
                           >
-                            {n}
+                            {b.number}
+                            <span className="ml-1 font-normal opacity-70">
+                              {b.amount}
+                            </span>
                           </span>
                         ))}
                       </div>

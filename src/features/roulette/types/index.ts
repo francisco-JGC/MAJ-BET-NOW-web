@@ -29,8 +29,8 @@ export interface RoulettePlay {
   id: string;
   salePointId: string;
   playerId: string;
-  numbers: string[];
-  amountPerNumber: number;
+  /** Cada casilla con su monto: ahora pueden diferir entre sí. */
+  bets: Array<{ number: string; amount: number }>;
   totalAmount: number;
   winningNumber: string;
   isWin: boolean;
