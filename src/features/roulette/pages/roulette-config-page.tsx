@@ -3,6 +3,7 @@ import { AlertTriangle, CircleDot, Loader2, Save } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 import { useSession } from '@/features/auth/hooks/use-session';
+import { useGames, useToggleGame } from '@/features/games/hooks/use-games';
 import {
   useRouletteBoard,
   useRouletteConfig,
@@ -24,6 +25,13 @@ export function RouletteConfigPage() {
   const { data: salePoints } = useSalePoints();
   const { data: board } = useRouletteBoard();
   const upsert = useUpsertRouletteConfig();
+
+  // La ruleta está filtrada de la pantalla de Sorteos porque no tiene
+  // horarios, así que este es el único lugar desde donde se puede cortar
+  // la venta.
+  const { data: games } = useGames();
+  const rouletteGame = games?.find((g) => g.type === 'roulette') ?? null;
+  const toggleGame = useToggleGame();
 
   const [scope, setScope] = useState<string>(GLOBAL);
   const salePointId = scope === GLOBAL ? null : scope;
@@ -95,6 +103,51 @@ export function RouletteConfigPage() {
         números, su chance es 5 veces ese valor. En una ruleta real el valor
         es {fairPercent.toFixed(2)}% (1 de {board?.pockets.length ?? 38}).
       </p>
+
+      {rouletteGame && (
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4',
+            rouletteGame.isActive
+              ? 'border-emerald-300 bg-emerald-50'
+              : 'border-rose-300 bg-rose-50',
+          )}
+        >
+          <div>
+            <div className="text-sm font-bold">
+              {rouletteGame.isActive
+                ? 'La ruleta está activa'
+                : 'La ruleta está desactivada'}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {rouletteGame.isActive
+                ? 'Los vendedores pueden jugar y cada tirada factura.'
+                : 'Los vendedores no pueden jugar: el backend rechaza las tiradas.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={toggleGame.isPending}
+            onClick={() =>
+              toggleGame.mutate({
+                id: rouletteGame.id,
+                active: !rouletteGame.isActive,
+              })
+            }
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50',
+              rouletteGame.isActive
+                ? 'bg-rose-600 hover:bg-rose-700'
+                : 'bg-emerald-600 hover:bg-emerald-700',
+            )}
+          >
+            {toggleGame.isPending && (
+              <Loader2 className="size-4 animate-spin" />
+            )}
+            {rouletteGame.isActive ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
